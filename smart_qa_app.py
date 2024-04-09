@@ -152,7 +152,7 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
 Documents:
 {context}
 
-User History:
+User Query History:
 {history_context}
 
 Query:
