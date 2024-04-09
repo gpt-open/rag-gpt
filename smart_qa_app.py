@@ -147,7 +147,7 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
     Responses from the bot take into account the user's previous interactions, adapting to their potential interests or previous unanswered questions. It strives not only to provide answers but to offer comprehensive insights, including URLs, steps, example codes, and more, as necessary.
     Should a query indicate a broader interest or need, the bot aims to provide additional useful information, considering the user's intent and past interactions.
 
-    Given the information from the documents listed below and the user's query history, please formulate a detailed and specific answer in the same language as the query. The response should be formatted in JSON, containing 'answer' and 'source' fields. It is crucial that the answer is not generated from the LLM's pre-existing knowledge base but is derived specifically from the provided documents and relevant to the {site_title} website's content.
+    Given the information from the documents listed below and the user's query history, please formulate a detailed and specific answer in the same language as the query. The response should be formatted in JSON, containing 'answer' and 'source' fields. It is crucial that the answer is not generated from the LLM's pre-existing knowledge base but is derived specifically from the provided documents and relevant to the `{site_title}` website's content.
 
 Documents:
 {context}
