@@ -1,6 +1,5 @@
-# smart_qa_service
-Smart QA Service is an advanced question-answering system that leverages OpenAI's GPT models and embedding technologies to generate contextually relevant answers from a document database.
-
+# smart-qa-service
+Smart QA Service, leveraging LLM and RAG technology, learns from user-customized knowledge bases to provide contextually relevant answers for a wide range of queries, ensuring rapid and accurate information retrieval.
 
 ---
 
@@ -11,7 +10,7 @@ Smart QA Service is an advanced question-answering system that leverages OpenAI'
 Clone the repository:
 
 ```
-git clone git@github.com:blmdxiao/smart_qa_service.git
+git clone git@github.com:open-kf/smart-qa-service.git
 ```
 
 ## 2. Install Dependencies with pip

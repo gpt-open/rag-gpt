@@ -136,62 +136,58 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
     user_history = get_user_query_history(user_id)
     # Include user history in the prompt
     history_context = "\n--------------------\n".join([f"Previous Query: {item['query']}\nPrevious Answer: {item['answer']}" for item in user_history])
-    logger.info(f"for the query:'{query}' and user_id:'{user_id}', the history_context is {history_context}")
+    #logger.info(f"for the query:'{query}' and user_id:'{user_id}', the history_context is {history_context}")
 
     site_title = SITE_TITLE
     prompt = f"""
-    This is a smart customer service bot designed to assist users by providing information based on the content of the '{site_title}' website and its documentation. The system uses a combination of Large Language Model (LLM) and Retriever-Augmented Generation (RAG) with Chroma as the vector database to find the most relevant documents in response to user queries.
+    This smart customer service bot is engineered to provide users with information drawn from the `{site_title}` website's content. Utilizing a blend o
+f Large Language Model (LLM) and Retriever-Augmented Generation (RAG), with Chroma as the vector database, it identifies the most pertinent documents fo
+r user queries, ensuring contextually relevant responses.
+    The system prioritizes queries related to `{site_title}` website's content, informing users it cannot answer general knowledge questions outside the
+ site's scope. Instead, it encourages questions concerning the website's content.
+    For non-specific inquiries such as "Hello", "Who are you?", rather than using document recall, the bot provides a welcoming standard response, direc
+ting users to explore services or information on the `{site_title}` website's content.
+    Upon receiving a query, a similarity search is conducted to only recall documents from Chroma with relevance scores above 0, ensuring high-quality c
+ontext for answer generation. If all documents have scores of 0 or less, no recall occurs, underscoring our commitment to precision.
+    The bot's responses consider the user's interaction history, adapting to their potential interests or unresolved queries. It aims to deliver not jus
+t answers but comprehensive insights, incorporating URLs, steps, example codes, and more as needed.
+    When the query suggests broader interests or needs, the bot endeavors to provide additional, helpful information, reflecting the user's intent and p
+ast interactions.
 
-    Given the user's previous interactions as described above, consider how their past queries might inform their current needs. This historical context can help tailor the response to be more aligned with their likely interests or unresolved questions from previous interactions.
+    Given the information from the documents listed below and the user's query history, please formulate a detailed and specific answer to the query in
+the same language as the query. Your response should be in JSON format, containing 'answer' and 'source' fields.
 
-    When a query is received, the system first performs a similarity search to recall the top {k} documents from Chroma with relevance scores greater than 0 as candidates. If all recalled documents have relevance scores less than or equal to 0, no documents will be recalled. These documents then serve as the context for generating an answer. The aim is to provide users with precise information related to the '{site_title}' website, enhancing their understanding and usage of the site.
+Documents:
+{context}
 
-    For general greetings or queries not directly related to the website's content (e.g., "hello", "who are you"), the system should provide a friendly response and guide the user towards making inquiries related to the services or information available on the '{site_title}' website.
+User History:
+{history_context}
 
-    The goal is to assist users in retrieving information specific to the '{site_title}' website's offerings and documentation. Therefore, when generating a response, consider the user's actual application scenario and the intent behind their query, as well as any relevant history from their previous queries. Ensure that the response is informative, directly related to the query, and based on the documents provided as context.
+Query:
+"{query}"
 
-    It is crucial to provide responses that are as detailed and comprehensive as possible. When the query indicates a need for specific information, such as URLs, steps, or example code, the response should aim to include all such details. Use the context from the top recalled documents and any relevant history to form a thorough answer, leveraging any available specifics to enhance the relevance and usefulness of the response.
+Response Requirements:
+- If unsure about the answer to a query, proactively seek clarification.
+- Only refer to knowledge related to the `{site_title}` website's content, avoiding mention of external information.
+- Ensure that the answer is consistent with the existing information on the `{site_title}` website's content.
+- Format the answer using Markdown syntax to improve readability.
+- Respond must be crafted in the same language as the query.
 
-    Additionally, if the query's true intent seems to extend beyond the literal question asked, strive to address the underlying need or interest, possibly hinted at in their query history. This means not only answering the direct question but also providing additional information that could be helpful to the user based on the context and intent of the query, as well as their past interactions.
+Please format your response as follows:
+{{
+    "answer": "Provide a detailed and specific answer here, crafted in the query's language",
+    "source": ["Unique URL(s) of the document(s) that support your answer, with duplicates removed"]
+}}
 
-    When generating code snippets or examples, it is essential to ensure the code is not only correct but also well-formatted, with proper indentation and spacing for enhanced readability and adherence to coding standards. This helps users easily understand and apply the code within their own projects.
-
-    Given the information from the documents listed below and user's query history, please formulate a detailed and specific answer to the query in the same language as the query. Your response should be in JSON format, containing 'answer' and 'source' fields. The 'answer' field must include a precise and informative response based on the document contents, matching the language of the query, and considering any relevant user history. The 'source' field should list the URLs of the documents that directly support your answer. If the documents do not provide sufficient information for a definitive answer, please indicate that the answer is unknown in the 'answer' field.
-
-    Documents:
-    {context}
-
-    User History:
-    {history_context}
-
-    Query:
-    '{query}'
-
-    Instructions for response:
-    - Ensure your answer is relevant to the '{site_title}' website's content and the user's query history.
-    - Provide a detailed and specific answer based on the information found in the documents and the user's past queries, including URLs, steps, example code, and any other specifics requested in the query.
-    - For general inquiries or unrelated questions, offer a standard response that encourages users to ask more specific questions related to the website and their previous interactions.
-    - Respond in a manner that considers the user's intent and the practical application of the query, addressing not just the literal question but also the broader context, potential needs, and past queries.
-    - When providing code examples, ensure the code is correct and follows best practices for formatting and indentation to promote readability and maintainability.
-    - Avoid speculative or general responses not supported by the document contents or the user's query history.
-    - Respond in a manner that aligns with the query's language (e.g., if the query is in Chinese, respond in Chinese; if in English, respond in English; and so on for other languages).
-
-    Please format your response as follows:
-    {{
-      "answer": "Provide a detailed and specific answer here, in the same language as the query, including any requested URLs, steps, example code, or other specifics.",
-      "source": ["URL(s) of the document(s) supporting your answer"]
-    }}
-
-    Please format `answer` as follows:
-    The `answer` must be fully formatted using Markdown syntax to ensure proper rendering on web interfaces. This includes:
-    - **Bold** (`**bold**`) and *italic* (`*italic*`) text for emphasis.
-    - Unordered lists (`- item`) for itemization and ordered lists (`1. item`) for sequencing.
-    - `Inline code` (`` `Inline code` ``) for brief code snippets and (` ``` `) for longer examples, specifying the programming language for syntax highlighting when possible.
-    - [Hyperlinks](URL) (`[Hyperlinks](URL)`) to reference external sources.
-    - Headings (`# Heading 1`, `## Heading 2`, ...) to structure the answer effectively.
-
-    Ensure each Markdown element is used appropriately for its intended purpose. Avoid common formatting errors such as inconsistent use of list symbols, improper nesting of Markdown elements, or broken link syntax.
-    """
+Please format `answer` as follows:
+The `answer` must be fully formatted using Markdown syntax to ensure proper rendering on web interfaces. This includes:
+- **Bold** (`**bold**`) and *italic* (`*italic*`) text for emphasis.
+- Unordered lists (`- item`) for itemization and ordered lists (`1. item`) for sequencing.
+- `Inline code` (`` `Inline code` ``) for brief code snippets and (` ``` `) for longer examples, specifying the programming language for syntax highligh
+ting when possible.
+- [Hyperlinks](URL) (`[Hyperlinks](URL)`) to reference external sources.
+- Headings (`# Heading 1`, `## Heading 2`, ...) to structure the answer effectively.
+"""
 
     # Call GPT model to generate an answer
     response = g_client.chat.completions.create(
