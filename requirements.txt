@@ -1,0 +1,16 @@
+flask==3.0.2
+gunicorn==21.2.0
+loguru==0.7.2
+requests==2.31.0
+aiohttp==3.9.3
+aiosqlite==0.20.0
+beautifulsoup4==4.12.3
+openai==1.13.3
+langchain==0.1.10
+chromadb==0.4.24
+tiktoken==0.6.0
+gradio==4.19.2
+python-dotenv==1.0.1
+redis==5.0.3
+PyJWT==2.8.0
+werkzeug==3.0.1
