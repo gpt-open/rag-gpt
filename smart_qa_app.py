@@ -9,7 +9,7 @@ import time
 from urllib.parse import urljoin, urlparse
 import uuid
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_from_directory, abort
 from langchain.embeddings.openai import OpenAIEmbeddings
 from openai import OpenAI
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -46,7 +46,7 @@ URL_PREFIX = os.getenv('URL_PREFIX', 'your_url_prefix')
 MEDIA_DIR = os.getenv('MEDIA_DIR', 'your_media_dir')
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=STATIC_DIR)
 
 
 # Initialize Redis distributed lock
@@ -66,6 +66,54 @@ g_document_embedder = DocumentEmbedder(
     embedding_function=g_embeddings,
     persist_directory=CHROMA_DB_DIR
 )
+
+
+"""
+NOTE:
+In scenarios where using a dedicated static file server (like Nginx) is not feasible or desired, Flask can be configured to serve static files directly. This setup is particularly useful during development or in lightweight production environments where simplicity is preferred over the scalability provided by dedicated static file servers.
+
+This Flask application demonstrates how to serve:
+- Static media files from a dynamic path (`MEDIA_DIR`)
+- The homepages and assets for two single-page applications (SPAs): 'open-kf-chatbot' and 'open-kf-admin'.
+
+Note:
+While Flask is capable of serving static files, it's not optimized for the high performance and efficiency of a dedicated static file server like Nginx, especially under heavy load. For large-scale production use cases, deploying a dedicated static file server is recommended.
+
+The provided routes include a dynamic route for serving files from a specified media directory and specific routes for SPA entry points and assets. This configuration ensures that SPA routing works correctly without a separate web server.
+"""
+# Dynamically serve files from the MEDIA_DIR
+@app.route(f'/{MEDIA_DIR}/<filename>')
+def serve_media_file(filename):
+    # Construct the complete file path within the MEDIA_DIR
+    file_path = os.path.join(app.static_folder, MEDIA_DIR, filename)
+    # Check if the file exists and serve it if so
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return send_from_directory(os.path.join(app.static_folder, MEDIA_DIR), filename)
+    else:
+        # Return a 404 error if the file does not exist
+        abort(404)
+
+# Route for the homepage of the 'open-kf-chatbot' site
+@app.route('/open-kf-chatbot', strict_slashes=False)
+def index_chatbot():
+    return send_from_directory(f'{app.static_folder}/open-kf-chatbot', 'index.html')
+
+# Route for serving other static files of the 'open-kf-chatbot' application
+@app.route('/open-kf-chatbot/<path:path>')
+def serve_static_chatbot(path):
+    return send_from_directory(f'{app.static_folder}/open-kf-chatbot', path)
+
+# Route for the homepage of the 'open-kf-admin' site
+@app.route('/open-kf-admin', strict_slashes=False)
+def index_admin():
+    return send_from_directory(f'{app.static_folder}/open-kf-admin', 'index.html')
+
+# Route for serving other static files of the 'open-kf-admin' application
+@app.route('/open-kf-admin/<path:path>')
+def serve_static_admin(path):
+    return send_from_directory(f'{app.static_folder}/open-kf-admin', path)
+
+
 
 def get_db_connection():
     conn = sqlite3.connect(f"{SQLITE_DB_DIR}/{SQLITE_DB_NAME}")
@@ -111,6 +159,7 @@ def get_token():
     except Exception as e:
         logger.error(f"generate token with user_id:'{user_id}' is failed, the exception is {e}")
         return jsonify({'retcode': -20001, 'message': str(e), 'data': {}})
+
 
 def get_user_query_history(user_id):
     history_key = f"open_kf:query_history:{user_id}"
