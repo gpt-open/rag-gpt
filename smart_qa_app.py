@@ -80,19 +80,19 @@ def token_required(f):
             token = request.headers['Authorization'].split(" ")[1]
         if not token:
             logger.error("Token is missing!")
-            return jsonify({'retcode': -10000, 'message': 'Token is missing!', 'data': {}}), 400
+            return jsonify({'retcode': -10000, 'message': 'Token is missing!', 'data': {}}), 401
         try:
             user_payload = TokenHelper.verify_token(token)
             if user_payload == 'Token expired':
                 logger.error(f"Token: '{token}' is expired!")
-                return jsonify({'retcode': -10001, 'message': 'Token is expired!', 'data': {}}), 400
+                return jsonify({'retcode': -10001, 'message': 'Token is expired!', 'data': {}}), 401
             elif user_payload == 'Invalid token':
                 logger.error(f"Token: '{token}' is invalid")
-                return jsonify({'retcode': -10001, 'message': 'Token is invalid!', 'data': {}}), 400
+                return jsonify({'retcode': -10002, 'message': 'Token is invalid!', 'data': {}}), 401
             request.user_payload = user_payload  # Store payload in request for further use
         except Exception as e:
             logger.error(f"Token: '{token}' is invalid, the exception is {e}")
-            return jsonify({'retcode': -10001, 'message': 'Token is invalid!', 'data': {}}), 400
+            return jsonify({'retcode': -10003, 'message': 'Token is invalid!', 'data': {}}), 401
         return f(*args, **kwargs)
     return decorated_function
 
@@ -101,7 +101,7 @@ def get_token():
     data = request.json
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'retcode': -10000, 'message': 'user_id is required', 'data': {}})
+        return jsonify({'retcode': -20000, 'message': 'user_id is required', 'data': {}})
 
     try:
         # generate token
@@ -110,7 +110,7 @@ def get_token():
         return jsonify({"retcode": 0, "message": "success", "data": {"token": token}})
     except Exception as e:
         logger.error(f"generate token with user_id:'{user_id}' is failed, the exception is {e}")
-        return jsonify({'retcode': -20000, 'message': str(e), 'data': {}})
+        return jsonify({'retcode': -20001, 'message': str(e), 'data': {}})
 
 def get_user_query_history(user_id):
     history_key = f"open_kf:query_history:{user_id}"
@@ -281,7 +281,7 @@ def smart_query():
         return jsonify({"retcode": 0, "message": "success", "data": answer_json})
     except Exception as e:
         logger.error(f"query:'{query}' and user_id:'{user_id}' is processed failed, the exception is {e}")
-        return jsonify({'retcode': -20000, 'message': str(e), 'data': {}}), 500
+        return jsonify({'retcode': -20001, 'message': str(e), 'data': {}}), 500
 
 
 @app.route('/open_kf_api/smart_query_stream', methods=['POST'])
@@ -331,7 +331,7 @@ def smart_query_stream():
         return Response(generate_llm(), mimetype="text/event-stream", headers=headers)
     except Exception as e:
         logger.error(f"query:'{query}' and user_id:'{user_id}' is processed failed, the exception is {e}")
-        return jsonify({'retcode': -20000, 'message': str(e), 'data': {}}), 500
+        return jsonify({'retcode': -30000, 'message': str(e), 'data': {}}), 500
 
 
 @app.route('/open_kf_api/get_user_conversation_list', methods=['POST'])
@@ -345,7 +345,7 @@ def get_user_conversation_list():
     page_size = data.get('page_size')
 
     if None in ([start_timestamp, end_timestamp, page, page_size]):
-        return jsonify({'retcode': -10002, 'message': 'Missing required parameters'})
+        return jsonify({'retcode': -20000, 'message': 'Missing required parameters'})
 
     try:
         conn = get_db_connection()
@@ -386,7 +386,7 @@ def get_user_conversation_list():
         return jsonify({'retcode': 0, 'message': 'Success', 'data': {'total_count': total_count, 'conversation_list': conversation_list}})
     except Exception as e:
         logger.error(f"Failed to retrieve user conversation list: {e}")
-        return jsonify({'retcode': -10003, 'message': 'Internal server error'})
+        return jsonify({'retcode': -30000, 'message': 'Internal server error'})
     finally:
         if conn:
             conn.close()
@@ -479,7 +479,7 @@ def add_intervene_record():
         result = cur.fetchone()
         if result and result[0] > 0:
             logger.error(f"intervene query:'{query}' is already exists in the database")
-            return jsonify({'retcode': -30001, 'message': 'Query already exists in the database', 'data': {}})
+            return jsonify({'retcode': -30000, 'message': 'Query already exists in the database', 'data': {}})
 
         # Insert the intervene record into DB
         timestamp = int(time.time())
@@ -712,7 +712,7 @@ def login():
     password = data.get('password')
 
     if not account_name or not password:
-        return jsonify({'retcode': -10002, 'message': 'Account name and password are required', 'data': {}})
+        return jsonify({'retcode': -20000, 'message': 'Account name and password are required', 'data': {}})
 
     conn = None
     try:
@@ -739,9 +739,9 @@ def login():
 
             return jsonify({'retcode': 0, 'message': 'Login successful', 'data': {'token': token}})
         else:
-            return jsonify({'retcode': -10003, 'message': 'Invalid credentials', 'data': {}})
+            return jsonify({'retcode': -20001, 'message': 'Invalid credentials', 'data': {}})
     except Exception as e:
-        return jsonify({'retcode': -30001, 'message': f'An error occurred during login, exception:{e}', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': f'An error occurred during login, exception:{e}', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -756,12 +756,12 @@ def update_password():
     new_password = data.get('new_password')
 
     if None in (account_name, current_password, new_password):
-        return jsonify({'retcode': -10004, 'message': 'Account name, current password, and new password are required', 'data': {}})
+        return jsonify({'retcode': -20000, 'message': 'Account name, current password, and new password are required', 'data': {}})
 
     token_user_id = request.user_payload['user_id']
     if token_user_id != account_name:
         logger.error(f"account_name:'{account_name}' does not match with token_user_id:'{token_user_id}'")
-        return jsonify({'retcode': -10001, 'message': 'Token is invalid!', 'data': {}})
+        return jsonify({'retcode': -20001, 'message': 'Token is invalid!', 'data': {}})
 
     conn = None
     try:
@@ -775,7 +775,7 @@ def update_password():
 
         if not account or not check_password_hash(account['password_hash'], current_password):
             logger.error(f"Invalid account_name:'{account_name}' or current_password:'{current_password}'")
-            return jsonify({'retcode': -10005, 'message': 'Invalid account name or password', 'data': {}})
+            return jsonify({'retcode': -20001, 'message': 'Invalid account name or password', 'data': {}})
 
         # Update the password
         new_password_hash = generate_password_hash(new_password, method='pbkdf2:sha256', salt_length=10)
@@ -788,7 +788,7 @@ def update_password():
 
         return jsonify({'retcode': 0, 'message': 'Password updated successfully', 'data': {}})
     except Exception as e:
-        return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        return jsonify({'retcode': -20001, 'message': f'An error occurred: {str(e)}', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -809,7 +809,7 @@ def get_bot_setting():
     except Exception as e:
         logger.error(f"Error retrieving setting from Redis, excpetion:{e}")
         # Just ignore Redis error
-        #return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        #return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
 
     conn = None
     try:
@@ -835,10 +835,10 @@ def get_bot_setting():
             return jsonify({'retcode': 0, 'message': 'Success', 'data': {'config': setting_data}})
         else:
             logger.warning(f"No setting found")
-            return jsonify({'retcode': -10008, 'message': 'No setting found', 'data': {}})
+            return jsonify({'retcode': -20001, 'message': 'No setting found', 'data': {}})
     except Exception as e:
         logger.error(f"Error retrieving setting: {e}")
-        return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -860,7 +860,7 @@ def update_bot_setting():
 
     # Check for the presence of all required fields
     if None in (setting_id, initial_messages, suggested_messages, bot_name, bot_avatar, chat_icon, placeholder, model):
-        return jsonify({'retcode': -10004, 'message': 'All fields are required', 'data': {}})
+        return jsonify({'retcode': -20000, 'message': 'All fields are required', 'data': {}})
 
     conn = None
     try:
@@ -872,7 +872,7 @@ def update_bot_setting():
         cur.execute('SELECT id FROM t_bot_setting_tab WHERE id = ?', (setting_id,))
         if not cur.fetchone():
             logger.error(f"No setting found")
-            return jsonify({'retcode': -10009, 'message': 'Setting not found', 'data': {}})
+            return jsonify({'retcode': -20001, 'message': 'Setting not found', 'data': {}})
 
         # Convert lists to JSON strings for storage
         initial_messages_json = json.dumps(initial_messages)
@@ -909,12 +909,12 @@ def update_bot_setting():
             redis_client.set(key, json.dumps(bot_setting))
         except Exception as e:
             logger.error(f"update bot seeting in Redis is failed, the exception is {e}")
-            return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+            return jsonify({'retcode': -20001, 'message': f'An error occurred: {str(e)}', 'data': {}})
 
         return jsonify({'retcode': 0, 'message': 'Settings updated successfully', 'data': {}})
     except Exception as e:
         logger.error(f"Error updating setting in DB: {str(e)}")
-        return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -948,11 +948,11 @@ def submit_crawl_site():
     timestamp = data.get('timestamp')
 
     if not site or not timestamp:
-        return jsonify({'retcode': -10004, 'message': 'site and timestamp are required', 'data': {}})
+        return jsonify({'retcode': -20000, 'message': 'site and timestamp are required', 'data': {}})
 
     if not is_valid_url(site):
         logger.error(f"site:'{site} is not a valid URL!")
-        return jsonify({'retcode': -10007, 'message': f"site:'{site}' is not a valid URL", 'data': {}})
+        return jsonify({'retcode': -20001, 'message': f"site:'{site}' is not a valid URL", 'data': {}})
 
     domain = urlparse(site).netloc
     logger.info(f"domain is '{domain}'")
@@ -968,7 +968,7 @@ def submit_crawl_site():
         domain_info = cur.fetchone()
 
         if domain_info and timestamp <= domain_info["version"]:
-            return jsonify({'retcode': -10005, 'message': f'New timestamp:{timestamp} must be greater than the current version:{domain_info["version"]}.', 'data': {}})
+            return jsonify({'retcode': -20001, 'message': f'New timestamp:{timestamp} must be greater than the current version:{domain_info["version"]}.', 'data': {}})
 
         if g_redis_lock.acquire_lock():
             try:
@@ -989,7 +989,7 @@ def submit_crawl_site():
 
         return jsonify({'retcode': 0, 'message': 'Site submitted successfully for crawling.', 'data': {}})
     except Exception as e:
-        return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -1011,7 +1011,7 @@ def get_crawl_site_info():
         if site:
             if not is_valid_url(site):
                 logger.error(f"site:'{site}' is not a valid URL!")
-                return jsonify({'retcode': -10007, 'message': f"site:'{site}' is not a valid URL", 'data': {}})
+                return jsonify({'retcode': -20001, 'message': f"site:'{site}' is not a valid URL", 'data': {}})
             domain = urlparse(site).netloc
             logger.info(f"Searching for domain: '{domain}'")
             cur.execute("SELECT * FROM t_domain_tab WHERE domain = ?", (domain,))
@@ -1024,10 +1024,10 @@ def get_crawl_site_info():
             sites_info = [dict(row) for row in rows]
             return jsonify({'retcode': 0, 'message': 'Success', 'data': {'sites_info': sites_info}})
         else:
-            return jsonify({'retcode': -10008, 'message': 'No site information found', 'data': {}})
+            return jsonify({'retcode': -20001, 'message': 'No site information found', 'data': {}})
     except Exception as e:
         logger.error(f"An error occurred: {e}")
-        return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -1053,7 +1053,7 @@ def get_crawl_url_list():
         if site is not None:
             if not is_valid_url(site):
                 logger.error(f"Provided site: '{site}' is not a valid URL.")
-                return jsonify({'retcode': -10007, 'message': f"Provided site: '{site}' is not a valid URL.", 'data': {}})
+                return jsonify({'retcode': -20001, 'message': f"Provided site: '{site}' is not a valid URL.", 'data': {}})
 
             domain = urlparse(site).netloc
             logger.info(f"Fetching URL list for domain: '{domain}'")
@@ -1071,7 +1071,7 @@ def get_crawl_url_list():
         return jsonify({'retcode': 0, 'message': 'Success', 'data': response_data})
     except Exception as e:
         logger.error(f"An error occurred while fetching URL list: {str(e)}")
-        return jsonify({'retcode': -10006, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -1114,7 +1114,7 @@ def check_crawl_content_task(f):
         id_list = data.get('id_list')
 
         if not id_list or not isinstance(id_list, list) or len(id_list) == 0:
-            return jsonify({'retcode': -10000, 'message': 'Invalid or missing id_list parameter'})
+            return jsonify({'retcode': -20000, 'message': 'Invalid or missing id_list parameter'})
 
         conn = None
         try:
@@ -1128,7 +1128,7 @@ def check_crawl_content_task(f):
 
             if len(rows) != len(id_list):
                 missing_ids = set(id_list) - set(row[0] for row in rows)
-                return jsonify({'retcode': -10009, 'message': f'The following ids do not exist: {missing_ids}', 'data': {}})
+                return jsonify({'retcode': -20001, 'message': f'The following ids do not exist: {missing_ids}', 'data': {}})
 
             url_dict = {row["id"]: row["url"] for row in rows}
             domain_list = list(set(row["domain"] for row in rows))
@@ -1152,7 +1152,7 @@ def check_crawl_content_task(f):
                         finally:
                             g_redis_lock.release_lock()
         except Exception as e:
-            return jsonify({'retcode': -10010, 'message': f'An error occurred: {str(e)}', 'data': {}})
+            return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
         finally:
             if conn:
                 conn.close()
@@ -1199,7 +1199,7 @@ def upload_picture():
     picture_file = request.files.get('picture_file')
     if not picture_file:
         logger.error("Missing required parameters picture_file")
-        return jsonify({'retcode': -10001, 'message': 'Missing required parameters picture_file', data:{}})
+        return jsonify({'retcode': -20000, 'message': 'Missing required parameters picture_file', data:{}})
 
     try:
         original_filename = secure_filename(picture_file.filename)
@@ -1217,7 +1217,7 @@ def upload_picture():
         return jsonify({'retcode': 0, 'message': 'upload picture success', 'data': {'picture_url': picture_url}})
     except Exception as e:
         logger.error(f"An error occureed: {str(e)}")
-        return jsonify({'retcode': -20002, 'message': f'An error occurred: {str(e)}', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
 
 
 if __name__ == '__main__':
