@@ -67,9 +67,14 @@ g_document_embedder = DocumentEmbedder(
     persist_directory=CHROMA_DB_DIR
 )
 
+def get_db_connection():
+    conn = sqlite3.connect(f"{SQLITE_DB_DIR}/{SQLITE_DB_NAME}")
+    conn.row_factory = sqlite3.Row  # Set row factory to access columns by name
+    return conn
+
 
 """
-NOTE:
+Background:
 In scenarios where using a dedicated static file server (like Nginx) is not feasible or desired, Flask can be configured to serve static files directly. This setup is particularly useful during development or in lightweight production environments where simplicity is preferred over the scalability provided by dedicated static file servers.
 
 This Flask application demonstrates how to serve:
@@ -113,12 +118,6 @@ def index_admin():
 def serve_static_admin(path):
     return send_from_directory(f'{app.static_folder}/open-kf-admin', path)
 
-
-
-def get_db_connection():
-    conn = sqlite3.connect(f"{SQLITE_DB_DIR}/{SQLITE_DB_NAME}")
-    conn.row_factory = sqlite3.Row  # Set row factory to access columns by name
-    return conn
 
 def token_required(f):
     @wraps(f)
