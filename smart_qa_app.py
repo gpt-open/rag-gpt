@@ -402,8 +402,8 @@ def get_user_conversation_list():
     if None in ([start_timestamp, end_timestamp, page, page_size]):
         return jsonify({'retcode': -20000, 'message': 'Missing required parameters'})
 
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         cur = conn.cursor()
         offset = (page - 1) * page_size
 
@@ -415,17 +415,16 @@ def get_user_conversation_list():
         total_count = cur.fetchone()['total_count']
 
         # Then, fetch the most recent conversation record for each distinct user within the time range
-        cur.execute(f"""
-            WITH RankedConversations AS (
-                SELECT *, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctime DESC) AS rn
-                FROM t_user_qa_record_tab
-                WHERE ctime BETWEEN ? AND ?
-            )
-            SELECT * FROM RankedConversations WHERE rn = 1
-            ORDER BY ctime DESC
-            LIMIT ? OFFSET ?
-        """, (start_timestamp, end_timestamp, page_size, offset))
-
+        cur.execute('''
+                        SELECT t.* FROM t_user_qa_record_tab t
+                        INNER JOIN (
+                                      SELECT user_id, MAX(ctime) AS max_ctime
+                                      FROM t_user_qa_record_tab
+                                      WHERE ctime BETWEEN ? AND ?
+                                      GROUP BY user_id
+                                  ) tm ON t.user_id = tm.user_id AND t.ctime = tm.max_ctime
+                        ORDER BY t.ctime DESC LIMIT ? OFFSET ?
+                    ''', (start_timestamp, end_timestamp, page_size, offset))
         conversation_list = [{
             "user_id": row["user_id"],
             "latest_query": {
