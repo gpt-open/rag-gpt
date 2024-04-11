@@ -47,7 +47,7 @@ pip install -r requirements.txt
 Before starting the OpenKF service, you need to modify the related configurations for the program to initialize correctly. 
 
 ```shell
-copy env_templat .env
+copy env_template .env
 ```
 
 The variables in .env
@@ -90,8 +90,7 @@ python3 create_sqlite_db.py
 The OpenKF service relies on Redis as its caching service. If Redis is already installed, start Redis and listen on port `6379`. If not installed, refer to the following method for installation.
 
 ```shell
-docker pull redis
-docker run --name some-redis -d -p 6379:6379 redis
+docker run --name redis -d -p 6379:6379 redis
 ```
 
 ### 6. Start the service
