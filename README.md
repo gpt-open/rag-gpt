@@ -77,20 +77,20 @@ MEDIA_DIR="media_dir"
 - Modify `URL_PREFIX` according to your website's domain.
 
 
-### 4. Create SQLite Database
-
-The OpenKF service uses SQLite as its storage DB. Before starting the OpenKF service, you need to execute the following command to initialize the database and add the default configuration for admin console.
-
-```shell
-python3 create_sqlite_db.py
-```
-
-### 5. Install Redis
+### 4. Install Redis
 
 The OpenKF service relies on Redis as its caching service. If Redis is already installed, start Redis and listen on port `6379`. If not installed, refer to the following method for installation.
 
 ```shell
 docker run --name redis -d -p 6379:6379 redis
+```
+
+### 5. Create SQLite Database
+
+The OpenKF service uses SQLite as its storage DB. Before starting the OpenKF service, you need to execute the following command to initialize the database and add the default configuration for admin console.
+
+```shell
+python3 create_sqlite_db.py
 ```
 
 ### 6. Start the service
