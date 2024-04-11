@@ -13,7 +13,7 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 Clone the repository:
 
 ```shell
-git clone https://github.com/open-kf/smart-qa-service
+git clone https://github.com/open-kf/smart-qa-service && cd smart-qa-service
 ```
 
 ### 2. Set up the Python running environment
