@@ -400,8 +400,8 @@ def get_user_conversation_list():
     if None in ([start_timestamp, end_timestamp, page, page_size]):
         return jsonify({'retcode': -20000, 'message': 'Missing required parameters'})
 
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         cur = conn.cursor()
         offset = (page - 1) * page_size
 
