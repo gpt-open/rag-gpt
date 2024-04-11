@@ -174,7 +174,7 @@ Through the admin console link **`http://127.0.0.1:7000/open-kf-admin/#/embed`**
 <br/>
 <a href="https://docs.openim.io/" target="_blank"> OpenIM chatbot </a>
 <br/>
-<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-9.jpg">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-8.jpg">
 </div>
 
 ### 5. View the user's chatbot visit history
@@ -182,10 +182,20 @@ Through the admin console link **`http://127.0.0.1:7000/open-kf-admin/#/embed`**
 Through the admin console link **`http://127.0.0.1:7000/open-kf-admin/#/dashboard`**, you can view the historical request records of all users within a specified time range.
 
 <div align="center">
-<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-8.jpg">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-9.jpg">
 </div>
 
 
+## The frontend of admin console and chatbot
+The OpenKF service integrates 2 frontend modules, and their source code information is as follows:
 
+### admin console
+> [Code Repository](https://github.com/open-kf/smart-qa-admin)
 
+An intuitive web-based admin interface for Smart QA Service, offering comprehensive control over content, configuration, and user interactions. Enables effortless management of the knowledge base, real-time monitoring of queries and feedback, and continuous improvement based on user insights.
+
+### chatbot
+> [Code Repository](https://github.com/open-kf/smart-qa-h5)
+
+An HTML5 interface for Smart QA Service designed for easy integration into websites via iframe, providing users direct access to a tailored knowledge base without leaving the site, enhancing functionality and immediate query resolution.
 
