@@ -10,6 +10,7 @@ from urllib.parse import urljoin, urlparse
 import uuid
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Response, send_from_directory, abort
+from flask_cors import CORS
 from langchain.embeddings.openai import OpenAIEmbeddings
 from openai import OpenAI
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -47,6 +48,7 @@ MEDIA_DIR = os.getenv('MEDIA_DIR', 'your_media_dir')
 
 
 app = Flask(__name__, static_folder=STATIC_DIR)
+CORS(app)
 
 
 # Initialize Redis distributed lock

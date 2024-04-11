@@ -47,7 +47,7 @@ pip install -r requirements.txt
 Before starting the OpenKF service, you need to modify the related configurations for the program to initialize correctly. 
 
 ```shell
-copy env_template .env
+cp env_template .env
 ```
 
 The variables in .env
@@ -68,7 +68,7 @@ HISTORY_EXPIRE_TIME=10800
 MAX_EMBEDDING_INPUT=2048
 SITE_TITLE="your site title"
 STATIC_DIR="web"
-URL_PREFIX="http://127.0.0.1:7000/"
+URL_PREFIX="http://your-server-ip:7000/"
 MEDIA_DIR="media_dir"
 ```
 
@@ -116,9 +116,9 @@ sh start.sh
 
 ## Configure the admin console
 
-### 1. Log in to the admin console
+### 1. Login to the admin console
 
-Access the admin console through the link **`http://127.0.0.1:7000/open-kf-admin/`** to reach the login page. The default username and password are **`admin`** and **`open_kf_AIGC@2024`** (can be checked in `create_sqlite_db.py`).
+Access the admin console through the link **`http://your-server-ip:7000/open-kf-admin/`** to reach the login page. The default username and password are **`admin`** and **`open_kf_AIGC@2024`** (can be checked in `create_sqlite_db.py`).
 
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-2.jpg">
@@ -130,7 +130,7 @@ After logging in successfully, you will be able to see the configuration page of
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-3.jpg">
 </div>
 
-On the page **`http://127.0.0.1:7000/open-kf-admin/#/`**, you can set the following configurations:
+On the page **`http://your-server-ip:7000/open-kf-admin/#/`**, you can set the following configurations:
 - Choose the LLM base, currently only the `gpt-3.5-turbo` option is available, which will be gradually expanded.
 - Initial Messages
 - Suggested Messages
@@ -147,7 +147,7 @@ After submitting the website URL, once the server retrieves the list of all web 
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-4.jpg">
 </div>
 
-You can actively refresh the page **`http://127.0.0.1:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of theweb page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Stored`**.
+You can actively refresh the page **`http://your-server-ip:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of theweb page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Stored`**.
 
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-5.jpg">
@@ -155,7 +155,7 @@ You can actively refresh the page **`http://127.0.0.1:7000/open-kf-admin/#/sourc
 
 ### 3. Test the chatbot
 
-After importing website data in the admin console, you can experience the chatbot service through the link **`http://127.0.0.1:7000/open-kf-chatbot/`**.
+After importing website data in the admin console, you can experience the chatbot service through the link **`http://your-server-ip:7000/open-kf-chatbot/`**.
 
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-6.jpg">
@@ -163,7 +163,7 @@ After importing website data in the admin console, you can experience the chatbo
 
 ### 4. Embed on your website
 
-Through the admin console link **`http://127.0.0.1:7000/open-kf-admin/#/embed`**, you can see the detailed tutorial for configuring the iframe in your website.
+Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/embed`**, you can see the detailed tutorial for configuring the iframe in your website.
 
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-7.jpg">
@@ -178,7 +178,7 @@ Through the admin console link **`http://127.0.0.1:7000/open-kf-admin/#/embed`**
 
 ### 5. View the user's chatbot visit history
 
-Through the admin console link **`http://127.0.0.1:7000/open-kf-admin/#/dashboard`**, you can view the historical request records of all users within a specified time range.
+Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/dashboard`**, you can view the historical request records of all users within a specified time range.
 
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-9.jpg">
