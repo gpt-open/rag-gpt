@@ -188,7 +188,7 @@ def init_bot_setting():
     bot_avatar = ''
     chat_icon = ''
     placeholder = 'Message...'
-    model = 'gpt-3.5-turbor'
+    model = 'gpt-3.5-turbo'
 
     conn = None
     try:
