@@ -1,11 +1,12 @@
 # coding=utf-8
+import os
 import redis
 
 class RedisConfig:
-    HOST = '127.0.0.1'  # Redis server host
-    PORT = 6379         # Redis server port
-    DB = 0              # Default database to use
-    SOCKET_TIMEOUT = 5  # Socket timeout in seconds for read/write operations
+    HOST = os.getenv('REDIS_HOST', '127.0.0.1')  # Use environment variable or default to localhost
+    PORT = int(os.getenv('REDIS_PORT', 6379))    # Use environment variable or default to 6379
+    DB = int(os.getenv('REDIS_DB', 0))           # Use environment variable or default to DB 0
+    SOCKET_TIMEOUT = 5                          # Socket timeout in seconds for read/write operations
 
 # Create a Redis connection pool
 redis_pool = redis.ConnectionPool(

@@ -26,4 +26,3 @@ class TokenHelper:
             return 'Token expired'
         except jwt.InvalidTokenError:
             return 'Invalid token'
-

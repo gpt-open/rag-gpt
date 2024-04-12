@@ -13,36 +13,10 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 Clone the repository:
 
 ```shell
-git clone https://github.com/open-kf/smart-qa-service && cd smart-qa-service
+git clone https://github.com/open-kf/smart-qa-service.git && cd smart-qa-service
 ```
 
-### 2. Set up the Python running environment
-
-It is recommended to install Python-related dependencies in a Python virtual environment to avoid affecting dependencies of other projects.
-
-#### Create and activate a virtual environment
-
-If you have not yet created a virtual environment, you can create one with the following command:
-
-```shell
-python3 -m venv myenv
-```
-
-After creation, activate the virtual environment:
-
-```shell
-source myenv/bin/activate
-```
-
-#### Install dependencies with pip
-
-Once the virtual environment is activated, you can use `pip` to install the required dependencies. 
-
-```shell
-pip install -r requirements.txt
-```
-
-### 3. Configure variables of .env
+### 2. Configure variables of .env
 
 Before starting the OpenKF service, you need to modify the related configurations for the program to initialize correctly. 
 
@@ -52,7 +26,7 @@ cp env_template .env
 
 The variables in .env
 
-```env
+```shell
 SQLITE_DB_DIR="sqlite_dir"
 SQLITE_DB_NAME="mydatabase.sqlite3"
 MAX_CRAWL_PARALLEL_REQUEST=5
@@ -76,8 +50,41 @@ MEDIA_DIR="media_dir"
 - Modify `SITE_TITLE` to your website's name.
 - Modify `URL_PREFIX` according to your website's domain.
 
+### 3. Deploy OpenKF using Docker
 
-### 4. Install Redis
+```shell
+docker-compose up --build
+```
+
+### 4. Deploy OpenKF from source code
+
+####  4.1 Set up the Python running environment
+
+It is recommended to install Python-related dependencies in a Python virtual environment to avoid affecting dependencies of other projects.
+
+##### Create and activate a virtual environment
+
+If you have not yet created a virtual environment, you can create one with the following command:
+
+```shell
+python3 -m venv myenv
+```
+
+After creation, activate the virtual environment:
+
+```shell
+source myenv/bin/activate
+```
+
+##### Install dependencies with pip
+
+Once the virtual environment is activated, you can use `pip` to install the required dependencies. 
+
+```shell
+pip install -r requirements.txt
+```
+
+#### 4.2 Install Redis
 
 The OpenKF service relies on Redis as its caching service. If Redis is already installed, start Redis and listen on port `6379`. If not installed, refer to the following method for installation.
 
@@ -85,7 +92,7 @@ The OpenKF service relies on Redis as its caching service. If Redis is already i
 docker run --name redis -d -p 6379:6379 redis
 ```
 
-### 5. Create SQLite Database
+#### 4.3 Create SQLite Database
 
 The OpenKF service uses SQLite as its storage DB. Before starting the OpenKF service, you need to execute the following command to initialize the database and add the default configuration for admin console.
 
@@ -93,7 +100,7 @@ The OpenKF service uses SQLite as its storage DB. Before starting the OpenKF ser
 python3 create_sqlite_db.py
 ```
 
-### 6. Start the service
+#### 4.4 Start the service
 
 If you have completed the steps above, you can try to start the OpenKF service by executing the following command.
 
@@ -112,6 +119,7 @@ sh start.sh
 > [!NOTE]
 > - The service port for OpenKF is **`7000`**. During the first test, please try not to change the port so that you can quickly experience the entire product process.
 > - We recommend starting the OpenKF service using **`start.sh`** in multi-process mode for a smoother user experience.
+
 
 
 ## Configure the admin console
