@@ -25,7 +25,7 @@ from crawler_module.document_embedding import DocumentEmbedder
 
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # Retrieve environment variables or set default values
 SITE_TITLE = os.getenv('SITE_TITLE', 'your_site_title')
