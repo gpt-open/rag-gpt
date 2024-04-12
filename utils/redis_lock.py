@@ -40,4 +40,3 @@ class RedisLock:
         """
         # Executes the Lua script, passing the lock ID and lock value
         return self.redis_client.eval(script, 1, self.lock_id, self.lock_value)
-
