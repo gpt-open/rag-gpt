@@ -13,3 +13,4 @@ python-dotenv==1.0.1
 PyJWT==2.8.0
 werkzeug==3.0.1
 flask-cors==4.0.0
+diskcache==5.6.3
