@@ -12,14 +12,14 @@ from utils.logger_config import my_logger as logger
 
 class AsyncCrawlerSiteContent:
 
-    def __init__(self, domain_list, sqlite_db_path, max_requests, max_embedding_input, document_embedder_obj, redis_lock):
+    def __init__(self, domain_list, sqlite_db_path, max_requests, max_embedding_input, document_embedder_obj, distributed_lock):
         logger.info(f"[CRAWL_CONTENT] init, domain_list:{domain_list}")
         self.domain_list = domain_list
         self.sqlite_db_path = sqlite_db_path
         self.semaphore = asyncio.Semaphore(max_requests)
         self.max_embedding_input = max_embedding_input
         self.document_embedder_obj = document_embedder_obj
-        self.redis_lock = redis_lock
+        self.distributed_lock = distributed_lock
         self.count = 0
         self.batch_size = max_requests * 2
 
@@ -112,11 +112,10 @@ class AsyncCrawlerSiteContent:
         logger.info(f"[CRAWL_CONTENT] update_doc_status, doc_id_list:{doc_id_list}, doc_status:{doc_status}")
         timestamp = int(time.time())
         async with aiosqlite.connect(self.sqlite_db_path) as db:
-            # Enable WAL mode for better concurrency
             await db.execute("PRAGMA journal_mode=WAL;")
 
-            if await self.redis_lock.aacquire_lock():
-                try:
+            try:
+                with self.distributed_lock.lock():
                     await db.execute(
                         "UPDATE t_raw_tab SET doc_status = ?, mtime = ? WHERE id IN ({placeholders})".format(
                             placeholders=','.join(['?' for _ in doc_id_list])
@@ -124,8 +123,8 @@ class AsyncCrawlerSiteContent:
                         [doc_status, timestamp] + doc_id_list
                     )
                     await db.commit()
-                finally:
-                    await self.redis_lock.arelease_lock()
+            except Exception as e:
+                logger.error(f"process distributed_lock exception:{e}")
 
     async def fetch_existing_contents(self, doc_id_list):
         """
@@ -134,7 +133,6 @@ class AsyncCrawlerSiteContent:
         logger.info(f"[CRAWL_CONTENT] fetch_existing_contents, doc_id_list:{doc_id_list}")
         query = "SELECT id, content FROM t_raw_tab WHERE id IN ({})".format(', '.join('?' for _ in doc_id_list))
         async with aiosqlite.connect(self.sqlite_db_path) as db:
-            # Enable WAL mode for better concurrency
             await db.execute("PRAGMA journal_mode=WAL;")
 
             cursor = await db.execute(query, doc_id_list)
@@ -192,33 +190,31 @@ class AsyncCrawlerSiteContent:
             content_update_queries.append((content_json, content_length, 3, timestamp, doc_id))
 
         # Lock to ensure database operations are atomic
-        if await self.redis_lock.aacquire_lock():
-            try:
-                async with aiosqlite.connect(self.sqlite_db_path) as db:
-                    # Enable WAL mode for better concurrency
-                    await db.execute("PRAGMA journal_mode=WAL;")
+        async with aiosqlite.connect(self.sqlite_db_path) as db:
+            await db.execute("PRAGMA journal_mode=WAL;")
 
+            try:
+                with self.distributed_lock.lock():
                     # Update content details in t_raw_tab
                     await db.executemany(
                         "UPDATE t_raw_tab SET content = ?, content_length = ?, doc_status = ?, mtime = ? WHERE id = ?",
                         content_update_queries
                     )
                     await db.commit()
-            finally:
-                await self.redis_lock.arelease_lock()
-
+            except Exception as e:
+                logger.error(f"process distributed_lock exception:{e}")
+    
         # Delete old embeddings
         doc_id_list = list(updated_contents.keys())
         await self.delete_embedding_doc(doc_id_list)
 
         # Prepare data for updating embeddings and database records
         data_for_embedding = [(doc_id, url_dict[doc_id], chunk_text_vec) for doc_id, chunk_text_vec in updated_contents.items()]
-        if await self.redis_lock.aacquire_lock():
-            try:
+        try:
+            with self.distributed_lock.lock():
                 records_to_add, records_to_update = await self.document_embedder_obj.aadd_content_embedding(data_for_embedding)
                 # Insert new embedding records and update t_raw_tab doc_status to 4
                 async with aiosqlite.connect(self.sqlite_db_path) as db:
-                    # Enable WAL mode for better concurrency
                     await db.execute("PRAGMA journal_mode=WAL;")
 
                     if records_to_add:
@@ -229,8 +225,8 @@ class AsyncCrawlerSiteContent:
                     if records_to_update:
                         await db.executemany("UPDATE t_raw_tab SET doc_status = ?, mtime = ? WHERE id = ?", records_to_update)
                     await db.commit()
-            finally:
-                await self.redis_lock.arelease_lock()
+        except Exception as e:
+            logger.error(f"process distributed_lock exception:{e}")
 
     async def update_unchanged_contents_status(self, unchanged_doc_ids):
         """
@@ -238,16 +234,15 @@ class AsyncCrawlerSiteContent:
         """
         logger.info(f"[CRAWL_CONTENT] update_unchanged_contents_status, unchanged_doc_ids:{unchanged_doc_ids}")
         async with aiosqlite.connect(self.sqlite_db_path) as db:
-            # Enable WAL mode for better concurrency
             await db.execute("PRAGMA journal_mode=WAL;")
 
-            if await self.redis_lock.aacquire_lock():
-                try:
+            try:
+                with self.distributed_lock.lock():
                     async with aiosqlite.connect(self.sqlite_db_path) as db:
                         await db.execute("UPDATE t_raw_tab SET doc_status = 4 WHERE id IN ({})".format(', '.join('?' for _ in unchanged_doc_ids)), unchanged_doc_ids)
                         await db.commit()
-                finally:
-                    await self.redis_lock.arelease_lock()
+            except Exception as e:
+                logger.error(f"process distributed_lock exception:{e}") 
 
     async def add_content(self, url_dict):
         """Begin processing URLs from url_dict in batches for add."""
@@ -294,7 +289,6 @@ class AsyncCrawlerSiteContent:
         doc_id_tuple = tuple(doc_id_vec)
         placeholder = ','.join('?' * len(doc_id_vec))  # Create placeholders
         async with aiosqlite.connect(self.sqlite_db_path) as db:
-            # Enable WAL mode for better concurrency
             await db.execute("PRAGMA journal_mode=WAL;")
 
             cursor = await db.execute(f"SELECT embedding_id_list FROM t_doc_embedding_map_tab WHERE doc_id IN ({placeholder})", doc_id_tuple)
@@ -302,8 +296,8 @@ class AsyncCrawlerSiteContent:
             # Parse embedding_id_list and flatten the list
             embedding_id_vec = [id for row in rows for id in json.loads(row[0])]
 
-            if await self.redis_lock.aacquire_lock():
-                try:
+            try:
+                with self.distributed_lock.lock():
                     if embedding_id_vec:
                         logger.info(f"[CRAWL_CONTENT] delete_embedding_doc, document_embedder_obj.delete_content_embedding:{embedding_id_vec}")
                         self.document_embedder_obj.delete_content_embedding(embedding_id_vec)
@@ -311,9 +305,9 @@ class AsyncCrawlerSiteContent:
                     # Delete records from t_doc_embedding_map_tab
                     await db.execute(f"DELETE FROM t_doc_embedding_map_tab WHERE doc_id IN ({placeholder})", doc_id_tuple)
                     await db.commit()
-                finally:
-                    await self.redis_lock.arelease_lock()
-
+            except Exception as e:
+                logger.error(f"process distributed_lock exception:{e}")
+        
     async def delete_content(self, url_dict, delete_raw_table=True):
         """Begin processing URLs from url_dict in batches for deletion."""
         begin_time = int(time.time())
@@ -345,12 +339,13 @@ class AsyncCrawlerSiteContent:
             # Delete records from t_raw_tab after deleting embeddings
             async with aiosqlite.connect(self.sqlite_db_path) as db:
                 await db.execute("PRAGMA journal_mode=WAL;")
-                if await self.redis_lock.aacquire_lock():
-                    try:
+
+                try:
+                    with self.distributed_lock.lock():
                         await db.execute(f"DELETE FROM t_raw_tab WHERE id IN ({placeholder})", doc_id_tuple)
                         await db.commit()
-                    finally:
-                        await self.redis_lock.arelease_lock()
+                except Exception as e:
+                    logger.error(f"process distributed_lock exception:{e}")
 
     async def update_content(self, url_dict):
         logger.info(f"[CRAWL_CONTENT] update_content begin, url_dict:{url_dict}")
@@ -361,7 +356,6 @@ class AsyncCrawlerSiteContent:
     async def check_and_update_domain_status(self):
         logger.info(f"[CRAWL_CONTENT] check_and_update_domain_status")
         async with aiosqlite.connect(self.sqlite_db_path) as db:
-            # Enable WAL mode for better concurrency
             await db.execute("PRAGMA journal_mode=WAL;")
 
             timestamp = int(time.time())
@@ -375,13 +369,12 @@ class AsyncCrawlerSiteContent:
                         "SELECT COUNT(*) FROM t_raw_tab WHERE domain = ? AND doc_status < 4", (domain,))
                     count_row = await cursor.fetchone()
                     if count_row[0] == 0:  # If no records have doc_status < 4
-                        if await self.redis_lock.aacquire_lock():
-                            try:
+                        try:
+                            with self.distributed_lock.lock():
                                 # Step 3: Update domain_status to 4 in t_domain_tab
                                 await db.execute(
                                     "UPDATE t_domain_tab SET domain_status = ?, mtime = ? WHERE domain = ?", (4, timestamp, domain))
                                 await db.commit()
-                            finally:
-                                await self.redis_lock.arelease_lock()
+                        except Exception as e:
+                            logger.error(f"process distributed_lock exception:{e}")
                         logger.info(f"[CRAWL_CONTENT] check_and_update_domain_status, Domain status updated to 4 for domain:'{domain}'")
-

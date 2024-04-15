@@ -1,3 +1,4 @@
+DISKCACHE_DIR="diskcache_dir"
 SQLITE_DB_DIR="sqlite_dir"
 SQLITE_DB_NAME="mydatabase.sqlite3"
 MAX_CRAWL_PARALLEL_REQUEST=5

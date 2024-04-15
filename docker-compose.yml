@@ -5,13 +5,3 @@ services:
     build: .
     ports:
       - "7000:7000"
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
-    depends_on:
-      - redis
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
