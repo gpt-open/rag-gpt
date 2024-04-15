@@ -84,15 +84,7 @@ Once the virtual environment is activated, you can use `pip` to install the requ
 pip install -r requirements.txt
 ```
 
-#### 4.2 Install Redis
-
-The OpenKF service relies on Redis as its caching service. If Redis is already installed, start Redis and listen on port `6379`. If not installed, refer to the following method for installation.
-
-```shell
-docker run --name redis -d -p 6379:6379 redis
-```
-
-#### 4.3 Create SQLite Database
+#### 4.2 Create SQLite Database
 
 The OpenKF service uses SQLite as its storage DB. Before starting the OpenKF service, you need to execute the following command to initialize the database and add the default configuration for admin console.
 
@@ -100,7 +92,7 @@ The OpenKF service uses SQLite as its storage DB. Before starting the OpenKF ser
 python3 create_sqlite_db.py
 ```
 
-#### 4.4 Start the service
+#### 4.3 Start the service
 
 If you have completed the steps above, you can try to start the OpenKF service by executing the following command.
 

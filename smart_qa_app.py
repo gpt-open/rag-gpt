@@ -15,8 +15,8 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from openai import OpenAI
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from utils.redis_config import redis_client
-from utils.redis_lock import RedisLock
+from utils.diskcache_config import DiskcacheClient
+from utils.diskcache_lock import DiskcacheLock
 from utils.token_helper import TokenHelper
 from utils.logger_config import my_logger as logger
 from crawler_module.web_link_crawler import AsyncCrawlerSiteLink
@@ -29,6 +29,7 @@ load_dotenv(override=True)
 
 # Retrieve environment variables or set default values
 SITE_TITLE = os.getenv('SITE_TITLE', 'your_site_title')
+DISKCACHE_DIR = os.getenv('DISKCACHE_DIR', 'your_diskcache_directory')
 SQLITE_DB_DIR = os.getenv('SQLITE_DB_DIR', 'your_sqlite_db_directory')
 SQLITE_DB_NAME = os.getenv('SQLITE_DB_NAME', 'your_sqlite_db_name')
 MAX_CRAWL_PARALLEL_REQUEST = int(os.getenv('MAX_CRAWL_PARALLEL_REQUEST', '5'))
@@ -51,8 +52,11 @@ app = Flask(__name__, static_folder=STATIC_DIR)
 CORS(app)
 
 
-# Initialize Redis distributed lock
-g_redis_lock = RedisLock(redis_client, 'open_kf:distributed_lock')
+# Initialize Diskcache client
+g_diskcache_client = DiskcacheClient(DISKCACHE_DIR)
+
+# Initialize Diskcache distributed lock
+g_diskcache_lock = DiskcacheLock(g_diskcache_client.cache, 'open_kf:distributed_lock')
 
 # Set OpenAI GPT API key
 g_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -164,7 +168,7 @@ def get_token():
 
 def get_user_query_history(user_id):
     history_key = f"open_kf:query_history:{user_id}"
-    history_items = redis_client.lrange(history_key, 0, -1)
+    history_items = g_diskcache_client.get_list(history_key)[::-1]
     history = [json.loads(item) for item in history_items]
     return history
 
@@ -182,7 +186,7 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
         for doc, score in results if score > 0
     ])
 
-    # Get user history from Redis
+    # Get user history from Cache
     user_history = get_user_query_history(user_id)
     # Include user history in the prompt
     history_context = "\n--------------------\n".join([f"Previous Query: {item['query']}\nPrevious Answer: {item['answer']}" for item in user_history])
@@ -239,8 +243,8 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
         model=GPT_MODEL_NAME,
         response_format={ "type": "json_object" },
         messages=[{"role": "system", "content": prompt}],
-        temperature=0.1,
-        top_p=0.8,
+        temperature=0.2,
+        top_p=0.5,
         stream=is_streaming
     )
     return response
@@ -251,28 +255,25 @@ def save_user_query_history(user_id, query, answer):
         answer_json = json.loads(answer)
 
         # After generating the response from GPT
-        # Store user query and GPT response in Redis
+        # Store user query and GPT response in Cache
         history_key = f"open_kf:query_history:{user_id}"
         history_data = {'query': query, 'answer': answer_json}
-        redis_client.lpush(history_key, json.dumps(history_data))
-        redis_client.ltrim(history_key, 0, MAX_HISTORY_QUERY_SIZE - 1)  # Keep only the latest N entries
-        # Set the expiry time for the history key
-        redis_client.expire(history_key, HISTORY_EXPIRE_TIME)
+        g_diskcache_client.append_to_list(history_key, json.dumps(history_data), ttl=HISTORY_EXPIRE_TIME, max_length=MAX_HISTORY_QUERY_SIZE)
     except Exception as e:
-        logger.error(f"query:'{query}' and user_id:'{user_id}' is processed failed with Redis, the exception is {e}")
+        logger.error(f"query:'{query}' and user_id:'{user_id}' is processed failed with Cache, the exception is {e}")
 
     timestamp = int(time.time())
     conn = None
     try:
         # Store user query and GPT resposne in DB
         conn = get_db_connection()
-        if g_redis_lock.acquire_lock():
-            try:
+        try:
+            with g_diskcache_lock.lock():
                 conn.execute('INSERT INTO t_user_qa_record_tab (user_id, query, answer, source, ctime, mtime) VALUES (?, ?, ?, ?, ?, ?)',
                              (user_id, query, answer_json["answer"], json.dumps(answer_json["source"]), timestamp, timestamp))
                 conn.commit()
-            finally:
-                g_redis_lock.release_lock()
+        except Exception as e:
+            logger.error(f"process g_discache_lock exception:{e}")
     except Exception as e:
         logger.error(f"query:'{query}' and user_id:'{user_id}' is processed failed with Database, the exception is {e}")
     finally:
@@ -294,14 +295,14 @@ def check_smart_query(f):
         request.intervene_data = None
 
         try:
-            # Check if the query is in Redis
-            redis_key = f"open_kf:intervene:{query}"
-            intervene_data = redis_client.get(redis_key)
+            # Check if the query is in Cache
+            key = f"open_kf:intervene:{query}"
+            intervene_data = g_diskcache_client.get(key)
             if intervene_data:
-                logger.info(f"user_id:'{user_id}', query:'{query}' is hit in Redis, the intervene_data is {intervene_data}")
+                logger.info(f"user_id:'{user_id}', query:'{query}' is hit in Cache, the intervene_data is {intervene_data}")
                 request.intervene_data = intervene_data
         except Exception as e:
-            logger.error(f"Redis exception {e} for user_id:'{user_id}' and query:'{query}'")
+            logger.error(f"Cache exception {e} for user_id:'{user_id}' and query:'{query}'")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -379,7 +380,7 @@ def smart_query_stream():
                     answer_chunks.append(content)
                     # Send each answer segment
                     yield content
-            # After the streaming response is complete, save to Redis and SQLite
+            # After the streaming response is complete, save to Cache and SQLite
             answer = ''.join(answer_chunks)
             timecost = time.time() - beg
             logger.success(f"query:'{query}' and user_id:'{user_id}' is processed successfully, the answer is {answer}\nthe total timecost is {timecost}\n")
@@ -541,22 +542,22 @@ def add_intervene_record():
         source_str = json.dumps(source)
 
         cur = conn.cursor()
-        if g_redis_lock.acquire_lock():
-            try:
+        try:
+            with g_diskcache_lock.lock():
                 cur.execute('INSERT INTO t_user_qa_intervene_tab (query, intervene_answer, source, ctime, mtime) VALUES (?, ?, ?, ?, ?)',
                             (query, intervene_answer, source_str, timestamp, timestamp))
                 conn.commit()
-            finally:
-                g_redis_lock.release_lock()
+        except Exception as e:
+            logger.error(f"process g_discache_lock exception:{e}")
 
-        # Update Redis using simple string with the query as the key (prefixed)
-        redis_key = f"open_kf:intervene:{query}"
-        redis_value = json.dumps({"answer": intervene_answer, "source": source})
-        redis_client.set(redis_key, redis_value)
+        # Update Cache using simple string with the query as the key (prefixed)
+        key = f"open_kf:intervene:{query}"
+        value = json.dumps({"answer": intervene_answer, "source": source})
+        g_diskcache_client.set(key, value)
 
         return jsonify({"retcode": 0, "message": "success", 'data': {}})
     except Exception as e:
-        return jsonify({'retcode': -30000, 'message': 'Database or Redis error', 'data': {}})
+        return jsonify({'retcode': -30000, 'message': 'Database or Cache error', 'data': {}})
     finally:
         if conn:
             conn.close()
@@ -577,23 +578,23 @@ def delete_intervene_record():
         cur = conn.cursor()
         cur.execute("PRAGMA journal_mode=WAL;")
 
-        # First, find the query string for the given id to delete it from Redis
+        # First, find the query string for the given id to delete it from Cache
         cur.execute('SELECT query FROM t_user_qa_intervene_tab WHERE id = ?', (record_id,))
         row = cur.fetchone()
 
         if row:
             query = row['query']
             # Delete the record from DB
-            if g_redis_lock.acquire_lock():
-                try:
+            try:
+                with g_diskcache_lock.lock():
                     cur.execute('DELETE FROM t_user_qa_intervene_tab WHERE id = ?', (record_id,))
                     conn.commit()
-                finally:
-                    g_redis_lock.release_lock()
+            except Exception as e:
+                logger.error(f"process g_discache_lock exception:{e}")
 
-            # Now, delete the corresponding record from Redis
-            redis_key = f"open_kf:intervene:{query}"
-            redis_client.delete(redis_key)
+            # Now, delete the corresponding record from Cache
+            key = f"open_kf:intervene:{query}"
+            g_diskcache_client.delete(key)
 
             return jsonify({"retcode": 0, "message": "success", 'data': {}})
         else:
@@ -620,22 +621,22 @@ def batch_delete_intervene_record():
         cur = conn.cursor()
         cur.execute("PRAGMA journal_mode=WAL;")
 
-        # Retrieve the queries to delete their corresponding Redis entries
+        # Retrieve the queries to delete their corresponding Cache entries
         cur.execute(f'SELECT query FROM t_user_qa_intervene_tab WHERE id IN ({",".join(["?"]*len(id_list))})', id_list)
         rows = cur.fetchall()
 
         for row in rows:
             query = row['query']
-            redis_key = f"open_kf:intervene:{query}"
-            redis_client.delete(redis_key)  # Delete from Redis
+            key = f"open_kf:intervene:{query}"
+            g_diskcache_client.delete(key)
 
         # Then, batch delete from DB
-        if g_redis_lock.acquire_lock():
-            try:
+        try:
+            with g_diskcache_lock.lock():
                 cur.execute(f'DELETE FROM t_user_qa_intervene_tab WHERE id IN ({",".join(["?"]*len(id_list))})', id_list)
                 conn.commit()
-            finally:
-                g_redis_lock.release_lock()
+        except Exception as e:
+            logger.error(f"process g_discache_lock exception:{e}")
 
         return jsonify({"retcode": 0, "message": "success", 'data': {}})
     except Exception as e:
@@ -665,22 +666,22 @@ def update_intervene_record():
         source_json = json.dumps(source)  # Convert the source list to a JSON string for storing in DB
         timestamp = int(time.time())
         # Update the DB record
-        if g_redis_lock.acquire_lock():
-            try:
+        try:
+            with g_diskcache_lock.lock():
                 cur.execute('UPDATE t_user_qa_intervene_tab SET intervene_answer = ?, source = ?, mtime = ? WHERE id = ?',
                             (intervene_answer, source_json, timestamp, record_id))
                 conn.commit()
-            finally:
-                g_redis_lock.release_lock()
+        except Exception as e:
+            logger.error(f"process g_discache_lock exception:{e}")
 
-        # Retrieve the query text to update the corresponding Redis entry
+        # Retrieve the query text to update the corresponding Cache entry
         cur.execute('SELECT query FROM t_user_qa_intervene_tab WHERE id = ?', (record_id,))
         row = cur.fetchone()
         if row:
             query = row['query']
-            redis_key = f"open_kf:intervene:{query}"
-            redis_value = json.dumps({"answer": intervene_answer, "source": source})
-            redis_client.set(redis_key, redis_value)  # Update Redis
+            key = f"open_kf:intervene:{query}"
+            value = json.dumps({"answer": intervene_answer, "source": source})
+            g_diskcache_client.set(key, value)
         else:
             return jsonify({'retcode': -20001, 'message': 'Record not found', 'data': {}})
 
@@ -785,12 +786,12 @@ def login():
             logger.info(f"Generate token:'{token}'")
             
             # Set is_login to 1 and update mtime to the current Unix timestamp
-            if g_redis_lock.acquire_lock():
-                try:
+            try:
+                with g_diskcache_lock.lock():
                     cur.execute('UPDATE t_account_tab SET is_login = 1, mtime = ? WHERE account_name = ?', (int(time.time()), account_name,))
                     conn.commit()
-                finally:
-                    g_redis_lock.release_lock()
+            except Exception as e:
+                logger.error(f"process g_discache_lock exception:{e}")
 
             return jsonify({'retcode': 0, 'message': 'Login successful', 'data': {'token': token}})
         else:
@@ -834,12 +835,12 @@ def update_password():
 
         # Update the password
         new_password_hash = generate_password_hash(new_password, method='pbkdf2:sha256', salt_length=10)
-        if g_redis_lock.acquire_lock():
-            try:
+        try:
+            with g_diskcache_lock.lock():
                 cur.execute('UPDATE t_account_tab SET password_hash = ?, mtime = ? WHERE account_name = ?', (new_password_hash, int(time.time()), account_name,))
                 conn.commit()
-            finally:
-                g_redis_lock.release_lock()
+        except Exception as e:
+            logger.error(f"process g_discache_lock exception:{e}")
 
         return jsonify({'retcode': 0, 'message': 'Password updated successfully', 'data': {}})
     except Exception as e:
@@ -851,19 +852,19 @@ def update_password():
 
 @app.route('/open_kf_api/get_bot_setting', methods=['POST'])
 def get_bot_setting():
-    """Retrieve bot setting, first trying Redis and falling back to DB if not found."""
+    """Retrieve bot setting, first trying Cache and falling back to DB if not found."""
     try:
-        # Attempt to retrieve the setting from Redis
-        redis_key = "open_kf:bot_setting"
-        setting_redis = redis_client.get(redis_key)
-        if setting_redis:
-            setting_data = json.loads(setting_redis)
+        # Attempt to retrieve the setting from Cache
+        key = "open_kf:bot_setting"
+        setting_cache = g_diskcache_client.get(key)
+        if setting_cache:
+            setting_data = json.loads(setting_cache)
             return jsonify({'retcode': 0, 'message': 'Success', 'data': {'config': setting_data}})
         else:
-            logger.warning(f"could not find '{redis_key}' in Redis!")
+            logger.warning(f"could not find '{key}' in Cache!")
     except Exception as e:
-        logger.error(f"Error retrieving setting from Redis, excpetion:{e}")
-        # Just ignore Redis error
+        logger.error(f"Error retrieving setting from Cache, excpetion:{e}")
+        # Just ignore Cache error
         #return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
 
     conn = None
@@ -879,12 +880,12 @@ def get_bot_setting():
             # Process and return the setting details
             setting_data = {k: json.loads(v) if k in ['initial_messages', 'suggested_messages'] else v for k, v in setting.items()}
 
-            # Add bot setting into Redis
+            # Add bot setting into Cache
             try:
                 key = "open_kf:bot_setting"
-                redis_client.set(key, json.dumps(setting_data))
+                g_diskcache_client.set(key, json.dumps(setting_data))
             except Exception as e:
-                logger.error(f" add bot setting into Redis is failed, the exception is {e}")
+                logger.error(f" add bot setting into Cache is failed, the exception is {e}")
                 # Just ignore Reids error
 
             return jsonify({'retcode': 0, 'message': 'Success', 'data': {'config': setting_data}})
@@ -935,18 +936,18 @@ def update_bot_setting():
 
         # Update bot setting in DB
         timestamp = int(time.time())
-        if g_redis_lock.acquire_lock():
-            try:
+        try:
+            with g_diskcache_lock.lock():
                 cur.execute('''
                     UPDATE t_bot_setting_tab
                     SET initial_messages = ?, suggested_messages = ?, bot_name = ?, bot_avatar = ?, chat_icon = ?, placeholder = ?, model = ?, mtime = ?
                     WHERE id = ?
                 ''', (initial_messages_json, suggested_messages_json, bot_name, bot_avatar, chat_icon, placeholder, model, timestamp, setting_id))
                 conn.commit()
-            finally:
-                g_redis_lock.release_lock()
+        except Exception as e:
+            logger.error(f"process g_discache_lock exception:{e}")
 
-        # Update bot setting in Redis
+        # Update bot setting in Cache
         try:
             key = "open_kf:bot_setting"
             bot_setting = {
@@ -961,9 +962,9 @@ def update_bot_setting():
                 'ctime': timestamp,
                 'mtime': timestamp
             }
-            redis_client.set(key, json.dumps(bot_setting))
+            g_diskcache_client.set(key, json.dumps(bot_setting))
         except Exception as e:
-            logger.error(f"update bot seeting in Redis is failed, the exception is {e}")
+            logger.error(f"update bot seeting in Cache is failed, the exception is {e}")
             return jsonify({'retcode': -20001, 'message': f'An error occurred: {str(e)}', 'data': {}})
 
         return jsonify({'retcode': 0, 'message': 'Settings updated successfully', 'data': {}})
@@ -988,7 +989,7 @@ def async_crawl_link_task(site, version):
         sqlite_db_path=f"{SQLITE_DB_DIR}/{SQLITE_DB_NAME}",
         max_requests=MAX_CRAWL_PARALLEL_REQUEST,
         version=version,
-        redis_lock=g_redis_lock
+        distributed_lock=g_diskcache_lock
     )
     logger.info(f"async_crawl_link_task begin!, site:'{site}', version:{version}")
     asyncio.run(crawler_link.run())
@@ -1025,8 +1026,8 @@ def submit_crawl_site():
         if domain_info and timestamp <= domain_info["version"]:
             return jsonify({'retcode': -20001, 'message': f'New timestamp:{timestamp} must be greater than the current version:{domain_info["version"]}.', 'data': {}})
 
-        if g_redis_lock.acquire_lock():
-            try:
+        try:
+            with g_diskcache_lock.lock():
                 if domain_info:
                     domain_id, version = domain_info
                     # Update domain record
@@ -1036,8 +1037,8 @@ def submit_crawl_site():
                     cur.execute("INSERT INTO t_domain_tab (domain, domain_status, version, ctime, mtime) VALUES (?, 1, ?, ?, ?)", (domain, timestamp, int(time.time()), int(time.time())))
 
                 conn.commit()
-            finally:
-                g_redis_lock.release_lock()
+        except Exception as e:
+            logger.error(f"process g_discache_lock exception:{e}")
 
         # Start the asynchronous crawl task
         Thread(target=async_crawl_link_task, args=(site, timestamp)).start()
@@ -1150,7 +1151,7 @@ def async_crawl_content_task(domain_list, url_dict, task_type):
         max_requests=MAX_CRAWL_PARALLEL_REQUEST,
         max_embedding_input=MAX_EMBEDDING_INPUT,
         document_embedder_obj=g_document_embedder,
-        redis_lock=g_redis_lock
+        distributed_lock=g_diskcache_lock
     )
 
     # Run the crawler
@@ -1199,13 +1200,13 @@ def check_crawl_content_task(f):
                 cur.execute("SELECT domain_status FROM t_domain_tab WHERE domain = ?", (domain,))
                 domain_info = cur.fetchone()
                 if domain_info and domain_info["domain_status"] < 3:
-                    if g_redis_lock.acquire_lock():
-                        try:
+                    try:
+                        with g_diskcache_lock.lock():
                             cur.execute("UPDATE t_domain_tab SET domain_status = 3, mtime = ? WHERE domain = ?", (timestamp, domain))
                             conn.commit()
                             logger.info(f"Updated domain_status to 3 for domain: '{domain}'")
-                        finally:
-                            g_redis_lock.release_lock()
+                    except Exception as e:
+                        logger.error(f"process g_discache_lock exception:{e}")
         except Exception as e:
             return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
         finally:

@@ -5,12 +5,13 @@ import sqlite3
 import time
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
-from utils.redis_config import redis_client
+from utils.diskcache_config import DiskcacheClient
 
 
 # Load environment variables from .env file
 load_dotenv()
 
+DISKCACHE_DIR = os.getenv('DISKCACHE_DIR', 'your_disk_cache_directory')
 SQLITE_DB_DIR = os.getenv('SQLITE_DB_DIR', 'your_sqlite_db_directory')
 SQLITE_DB_NAME = os.getenv('SQLITE_DB_NAME', 'your_sqlite_db_name')
 
@@ -213,7 +214,7 @@ def init_bot_setting():
             )
             conn.commit()
 
-            # Add bot setting into Redis
+            # Add bot setting into Cache
             try:
                 key = "open_kf:bot_setting"
                 bot_setting = {
@@ -228,9 +229,10 @@ def init_bot_setting():
                     'ctime': timestamp,
                     'mtime': timestamp
                 }
-                redis_client.set(key, json.dumps(bot_setting))
+                diskcache_client = DiskcacheClient(DISKCACHE_DIR)
+                diskcache_client.set(key, json.dumps(bot_setting))
             except Exception as e:
-                print(f"[ERROR] add bot setting into Redis is failed, the exception is {e}")
+                print(f"[ERROR] add bot setting into Cache is failed, the exception is {e}")
     except Exception as e:
         print(f"[ERROR] init_bot_setting is failed, the exception is {e}")
     finally:
