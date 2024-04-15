@@ -49,6 +49,16 @@ class AsyncCrawlerSiteContent:
             for script_or_style in soup(['script', 'style', 'head', 'meta', 'link']):
                 script_or_style.decompose()
 
+            # Find all elements whose class names start with "footer" and remove them
+            footer_elements = soup.find_all(class_=lambda value: value and value.startswith('footer'))
+            for element in footer_elements:
+                element.decompose()
+
+            # Find all elements whose class names start with "navbar" and remove them
+            #navbar_elements = soup.find_all(class_=lambda value: value and value.startswith('navbar'))
+            #for element in navbar_elements:
+            #    element.decompose()
+
             last_element_text = ''
             if soup.body:
                 for element in soup.body.descendants:
