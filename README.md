@@ -27,6 +27,7 @@ cp env_template .env
 The variables in .env
 
 ```shell
+DISKCACHE_DIR="diskcache_dir"
 SQLITE_DB_DIR="sqlite_dir"
 SQLITE_DB_NAME="mydatabase.sqlite3"
 MAX_CRAWL_PARALLEL_REQUEST=5
