@@ -243,8 +243,8 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
         model=GPT_MODEL_NAME,
         response_format={ "type": "json_object" },
         messages=[{"role": "system", "content": prompt}],
-        temperature=0.2,
-        top_p=0.5,
+        temperature=0,
+        top_p=0.8,
         stream=is_streaming
     )
     return response

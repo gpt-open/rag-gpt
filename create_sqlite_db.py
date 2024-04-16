@@ -11,7 +11,7 @@ from utils.diskcache_config import DiskcacheClient
 # Load environment variables from .env file
 load_dotenv()
 
-DISKCACHE_DIR = os.getenv('DISKCACHE_DIR', 'your_disk_cache_directory')
+DISKCACHE_DIR = os.getenv('DISKCACHE_DIR', 'your_diskcache_directory')
 SQLITE_DB_DIR = os.getenv('SQLITE_DB_DIR', 'your_sqlite_db_directory')
 SQLITE_DB_NAME = os.getenv('SQLITE_DB_NAME', 'your_sqlite_db_name')
 
