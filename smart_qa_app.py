@@ -75,7 +75,8 @@ g_document_embedder = DocumentEmbedder(
 
 def get_db_connection():
     conn = sqlite3.connect(f"{SQLITE_DB_DIR}/{SQLITE_DB_NAME}")
-    conn.row_factory = sqlite3.Row  # Set row factory to access columns by name
+    conn.row_factory = sqlite3.Row              # Set row factory to access columns by name
+    conn.execute("PRAGMA journal_mode=WAL;")    # Enable WAL mode for better concurrency
     return conn
 
 
@@ -194,7 +195,7 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
 
     site_title = SITE_TITLE
     prompt = f"""
-This smart customer service bot is designed to provide users with information directly related to the `{site_title}` website's content. It uses a combination of Large Language Model (LLM) and Retriever-Augmented Generation (RAG), with Chroma serving as the vector database, to identify the most relevant documents for user queries, ensuring contextually pertinent responses.
+This smart customer service bot is designed to provide users with information directly related to the `{site_title}` website's content. It employs a combination of Large Language Model (LLM) and Retriever-Augmented Generation (RAG) technologies to accurately identify the most relevant documents for user queries, thereby ensuring responses are both contextually pertinent and timely.
 
 The system focuses on queries specifically related to the content of the `{site_title}` website, and will inform users when a query falls outside of this scope. It does not answer general knowledge questions based on the LLM's pre-existing knowledge unrelated to the site. Instead, users are encouraged to ask questions directly concerning the website's content.
 
@@ -477,7 +478,6 @@ def get_user_query_history_list():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # First, query the total count of records under the given conditions
         cur.execute(f'SELECT COUNT(*) FROM t_user_qa_record_tab {query_conditions}', params)
@@ -529,7 +529,6 @@ def add_intervene_record():
         # Check if query already exists in the database
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         cur.execute('SELECT COUNT(*) FROM t_user_qa_intervene_tab WHERE query = ?', (query,))
         result = cur.fetchone()
@@ -541,7 +540,6 @@ def add_intervene_record():
         timestamp = int(time.time())
         source_str = json.dumps(source)
 
-        cur = conn.cursor()
         try:
             with g_diskcache_lock.lock():
                 cur.execute('INSERT INTO t_user_qa_intervene_tab (query, intervene_answer, source, ctime, mtime) VALUES (?, ?, ?, ?, ?)',
@@ -576,7 +574,6 @@ def delete_intervene_record():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # First, find the query string for the given id to delete it from Cache
         cur.execute('SELECT query FROM t_user_qa_intervene_tab WHERE id = ?', (record_id,))
@@ -619,7 +616,6 @@ def batch_delete_intervene_record():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # Retrieve the queries to delete their corresponding Cache entries
         cur.execute(f'SELECT query FROM t_user_qa_intervene_tab WHERE id IN ({",".join(["?"]*len(id_list))})', id_list)
@@ -661,7 +657,6 @@ def update_intervene_record():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         source_json = json.dumps(source)  # Convert the source list to a JSON string for storing in DB
         timestamp = int(time.time())
@@ -719,7 +714,6 @@ def get_intervene_query_list():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # Calculate total count
         cur.execute('SELECT COUNT(*) FROM t_user_qa_intervene_tab WHERE ctime BETWEEN ? AND ?', (start_timestamp, end_timestamp))
@@ -774,7 +768,6 @@ def login():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # Check if the account exists and verify the password
         cur.execute('SELECT id, password_hash FROM t_account_tab WHERE account_name = ?', (account_name,))
@@ -823,7 +816,6 @@ def update_password():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # Check if the account exists and verify the current password
         cur.execute('SELECT id, password_hash FROM t_account_tab WHERE account_name = ?', (account_name,))
@@ -871,7 +863,6 @@ def get_bot_setting():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         cur.execute('SELECT * FROM t_bot_setting_tab LIMIT 1')
         setting = cur.fetchone()
@@ -922,7 +913,6 @@ def update_bot_setting():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # Check if the setting with provided ID exists
         cur.execute('SELECT id FROM t_bot_setting_tab WHERE id = ?', (setting_id,))
@@ -1017,7 +1007,6 @@ def submit_crawl_site():
         timestamp = int(timestamp)
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         # Check if the domain exists in the database
         cur.execute("SELECT id, version FROM t_domain_tab WHERE domain = ?", (domain,))
@@ -1062,7 +1051,6 @@ def get_crawl_site_info():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         if site:
             if not is_valid_url(site):
@@ -1100,7 +1088,6 @@ def get_crawl_url_list():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL;")
 
         response_data = {
             'url_list': []
@@ -1176,7 +1163,6 @@ def check_crawl_content_task(f):
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("PRAGMA journal_mode=WAL;")
 
             placeholders = ', '.join(['?'] * len(id_list))
             cur.execute(f"SELECT id, domain, url FROM t_raw_tab WHERE id IN ({placeholders})", id_list)
@@ -1274,6 +1260,44 @@ def upload_picture():
     except Exception as e:
         logger.error(f"An error occureed: {str(e)}")
         return jsonify({'retcode': -30000, 'message': f'An error occurred: {str(e)}', 'data': {}})
+
+
+@app.route('/open_kf_api/get_url_sub_content_list', methods=['POST'])
+@token_required
+def get_url_sub_content_list():
+    data = request.json
+    url_id = data.get('id')
+    if not url_id:
+        return jsonify({'retcode': -20000, 'message': 'id is required', 'data': {}})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('SELECT content FROM t_raw_tab WHERE id = ?', (url_id,))
+        row = cur.fetchone()
+        if row:
+            content = row['content']
+            content_vec = json.loads(content)
+            sub_content_list = [
+                {"index": index + 1, "content": part, "content_length": len(part)}
+                for index, part in enumerate(content_vec)
+            ]
+            return jsonify({
+                "retcode": 0,
+                "message": "success",
+                "data": {
+                    "sub_content_list": sub_content_list
+                }
+            })
+        else:
+            return jsonify({'retcode': -30000, 'message': 'Content not found', 'data': {}})
+    except Exception as e:
+        return jsonify({'retcode': -30001, 'message': 'Database exception', 'data': {}})
+    finally:
+        if conn:
+            conn.close()
 
 
 if __name__ == '__main__':
