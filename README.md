@@ -100,7 +100,7 @@ If you have completed the steps above, you can try to start the OpenKF service b
 - **Start single process:**
 
 ```shell
-python smart_qa_app.py
+python3 smart_qa_app.py
 ```
 
 - **Start multiple processes:**
