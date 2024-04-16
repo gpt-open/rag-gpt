@@ -47,9 +47,11 @@ URL_PREFIX="http://your-server-ip:7000/"
 MEDIA_DIR="media_dir"
 ```
 
-- Modify `OPENAI_API_KEY` to your own key, which can be obtained by logging into the [OpenAI dashboard](https://platform.openai.com/api-keys):
-- Modify `SITE_TITLE` to your website's name.
-- Modify `URL_PREFIX` according to your website's domain.
+- Modify the **`OPENAI_API_KEY`** with your own key, obtainable by logging into the [OpenAI dashboard](https://platform.openai.com/api-keys).
+- Change **`SITE_TITLE`** to reflect your website's name.
+- Adjust **`URL_PREFIX`** to match your website's domain.
+- Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` if you wish to use GPT-4 Turbo.
+
 
 ### 3. Deploy OpenKF using Docker
 
