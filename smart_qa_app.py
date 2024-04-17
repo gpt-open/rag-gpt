@@ -11,7 +11,7 @@ import uuid
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Response, send_from_directory, abort
 from flask_cors import CORS
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -28,21 +28,22 @@ from crawler_module.document_embedding import DocumentEmbedder
 load_dotenv(override=True)
 
 # Retrieve environment variables or set default values
-SITE_TITLE = os.getenv('SITE_TITLE', 'your_site_title')
 DISKCACHE_DIR = os.getenv('DISKCACHE_DIR', 'your_diskcache_directory')
 SQLITE_DB_DIR = os.getenv('SQLITE_DB_DIR', 'your_sqlite_db_directory')
 SQLITE_DB_NAME = os.getenv('SQLITE_DB_NAME', 'your_sqlite_db_name')
 MAX_CRAWL_PARALLEL_REQUEST = int(os.getenv('MAX_CRAWL_PARALLEL_REQUEST', '5'))
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'your_openai_api_key')
 CHROMA_DB_DIR = os.getenv('CHROMA_DB_DIR', 'your_chroma_db_directory')
 CHROMA_COLLECTION_NAME = os.getenv('CHROMA_COLLECTION_NAME', 'your_collection_name')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'your_openai_api_key')
 GPT_MODEL_NAME = os.getenv('GPT_MODEL_NAME', 'gpt-3.5-turbo')
 OPENAI_EMBEDDING_MODEL_NAME = os.getenv('OPENAI_EMBEDDING_MODEL_NAME', 'text-embedding-3-small')
-MAX_EMBEDDING_INPUT = int(os.getenv('MAX_EMBEDDING_INPUT', '2048'))
-MAX_QUERY_SIZE = int(os.getenv('MAX_QUERY_SIZE', '200'))
+MAX_CHUNK_LENGTH = int(os.getenv('MAX_CHUNK_LENGTH', '1300'))
+MAX_QUERY_LENGTH = int(os.getenv('MAX_QUERY_LENGTH', '200'))
 RECALL_TOP_K = int(os.getenv('RECALL_TOP_K', '3'))
-MAX_HISTORY_QUERY_SIZE = int(os.getenv('MAX_HISTORY_QUERY_SIZE', '5'))
-HISTORY_EXPIRE_TIME = int(os.getenv('HISTORY_EXPIRE_TIME', '10800'))
+COSINE_SIMILARITY_MAX_SCORE = float(os.getenv('COSINE_SIMILARITY_MAX_SCORE', '0.6'))
+MAX_HISTORY_SESSION_LENGTH = int(os.getenv('MAX_HISTORY_SESSION_LENGTH', '3'))
+SESSION_EXPIRE_TIME = int(os.getenv('SESSION_EXPIRE_TIME', '10800'))
+SITE_TITLE = os.getenv('SITE_TITLE', 'your_site_title')
 STATIC_DIR = os.getenv('STATIC_DIR', 'your_static_dir')
 URL_PREFIX = os.getenv('URL_PREFIX', 'your_url_prefix')
 MEDIA_DIR = os.getenv('MEDIA_DIR', 'your_media_dir')
@@ -177,23 +178,42 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
     # Perform similarity search
     beg = time.time()
     results = g_document_embedder.search_document(query, k)
-    timecost1 = time.time() - beg
-    #logger.info(f"for the query:'{query}' and user_id:'{user_id}, the top {k} results are: {results}\nthe timecost of similarity_search_with_score is {timecost1}\n")
+    timecost = time.time() - beg
+    site_title = SITE_TITLE
 
-    # Build the prompt for GPT
-    #context = "\n--------------------\n".join([f"Document URL: {result[0].metadata['source']}\nContent: {result[0].page_content}" for result in results])
-    context = "\n--------------------\n".join([
-        f"Document URL: {doc.metadata['source']}\nContent: {doc.page_content}"
-        for doc, score in results if score > 0
+    unfiltered_context = "\n--------------------\n".join([
+        f"URL: {doc.metadata['source']}\nCosine similarity score: {score}\nContent: {doc.page_content}"
+        for doc, score in results
     ])
 
-    # Get user history from Cache
-    user_history = get_user_query_history(user_id)
-    # Include user history in the prompt
-    history_context = "\n--------------------\n".join([f"Previous Query: {item['query']}\nPrevious Answer: {item['answer']}" for item in user_history])
-    #logger.info(f"for the query:'{query}' and user_id:'{user_id}', the history_context is {history_context}")
+    # Get history session from Cache
+    history_session = get_user_query_history(user_id)
+    # Build the history_context for prompt
+    history_context = "\n--------------------\n".join([f"Previous Query: {item['query']}\nPrevious Answer: {item['answer']}" for item in history_session])
 
-    site_title = SITE_TITLE
+    logger.info(f"for the query:'{query}' and user_id:'{user_id}'\nunfiltered_context={unfiltered_context}\nhistory_context={history_context}\nthe timecost of search_document is {timecost}")
+
+    # Build the context for prompt
+    filtered_results = [(doc, score) for doc, score in results if score < COSINE_SIMILARITY_MAX_SCORE]
+    if filtered_results:
+        filtered_context = "\n--------------------\n".join([
+            f"URL: {doc.metadata['source']}\nCosine similarity score: {score}\nContent: {doc.page_content}"
+            for doc, score in filtered_results
+        ])
+        context = f"""Documents size: {len(filtered_results)}
+Documents:
+{filtered_context}"""
+    else:
+        # Decide the response based on history relevance
+        if history_session:
+            context = f"""Documents size: 0
+No documents found directly related to the current query. We can first assess whether the current query is related 'User Query History'.
+If it is related, we can use the historical request information to organize an answer relevant to the `{site_title}` website's content.
+If it is not related, we will guide the user to ask questions relevant to the `{site_title}` website's content."""
+        else:
+            context = f"""Documents size: 0
+We could not find any documents related to the query. We will guide the user to ask questions relevant to the `{site_title}` website's content."""
+
     prompt = f"""
 This smart customer service bot is designed to provide users with information directly related to the `{site_title}` website's content. It employs a combination of Large Language Model (LLM) and Retriever-Augmented Generation (RAG) technologies to accurately identify the most relevant documents for user queries, thereby ensuring responses are both contextually pertinent and timely.
 
@@ -207,14 +227,12 @@ Should a query indicate a broader interest or need, the bot aims to provide addi
 
 Given the documents listed below and the user's query history, please provide a detailed and specific answer in the query's language. The response should be in JSON, with 'answer' and 'source' fields. Answers must be based on these documents and directly relevant to the `{site_title}` website. If a query is unrelated to `{site_title}`, inform the user that an answer cannot be provided and encourage questions about the website.
 
-Documents:
-{context}
+Query: "{query}"
 
 User Query History:
 {history_context}
 
-Query:
-"{query}"
+{context}
 
 Response Requirements:
 - If unsure about the answer, proactively seek clarification.
@@ -239,13 +257,15 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
 - Headings (`# Heading 1`, `## Heading 2`, ...) to structure the answer effectively.
 """
 
+    #logger.info(f"prompt={prompt}")
+
     # Call GPT model to generate an answer
     response = g_client.chat.completions.create(
         model=GPT_MODEL_NAME,
         response_format={ "type": "json_object" },
         messages=[{"role": "system", "content": prompt}],
         temperature=0,
-        top_p=0.8,
+        top_p=0.9,
         stream=is_streaming
     )
     return response
@@ -259,7 +279,7 @@ def save_user_query_history(user_id, query, answer):
         # Store user query and GPT response in Cache
         history_key = f"open_kf:query_history:{user_id}"
         history_data = {'query': query, 'answer': answer_json}
-        g_diskcache_client.append_to_list(history_key, json.dumps(history_data), ttl=HISTORY_EXPIRE_TIME, max_length=MAX_HISTORY_QUERY_SIZE)
+        g_diskcache_client.append_to_list(history_key, json.dumps(history_data), ttl=SESSION_EXPIRE_TIME, max_length=MAX_HISTORY_SESSION_LENGTH)
     except Exception as e:
         logger.error(f"query:'{query}' and user_id:'{user_id}' is processed failed with Cache, the exception is {e}")
 
@@ -320,8 +340,8 @@ def smart_query():
             intervene_data_json = json.loads(intervene_data)
             return jsonify({"retcode": 0, "message": "success", "data": intervene_data_json})
 
-        if len(query) > MAX_QUERY_SIZE:
-            query = query[:MAX_QUERY_SIZE]
+        if len(query) > MAX_QUERY_LENGTH:
+            query = query[:MAX_QUERY_LENGTH]
 
         #last_character = query[-1]
         #if last_character != "？" and last_character != "?":
@@ -1136,7 +1156,7 @@ def async_crawl_content_task(domain_list, url_dict, task_type):
         domain_list=domain_list,
         sqlite_db_path=f"{SQLITE_DB_DIR}/{SQLITE_DB_NAME}",
         max_requests=MAX_CRAWL_PARALLEL_REQUEST,
-        max_embedding_input=MAX_EMBEDDING_INPUT,
+        max_chunk_length=MAX_CHUNK_LENGTH,
         document_embedder_obj=g_document_embedder,
         distributed_lock=g_diskcache_lock
     )

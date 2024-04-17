@@ -10,7 +10,12 @@ class DocumentEmbedder:
 
     def __init__(self, collection_name, embedding_function, persist_directory):
         logger.info(f"[DOC_EMBEDDING] init, collection_name:'{collection_name}', persist_directory:{persist_directory}")
-        self.chroma_obj = Chroma(collection_name=collection_name, embedding_function=embedding_function, persist_directory=persist_directory)
+        collection_metadata = {"hnsw:space": "cosine"}
+        self.chroma_obj = Chroma(
+                collection_name=collection_name,
+                embedding_function=embedding_function,
+                persist_directory=persist_directory,
+                collection_metadata=collection_metadata)
 
     async def aadd_content_embedding(self, data):
         records_to_add = []
@@ -48,4 +53,3 @@ class DocumentEmbedder:
 
     def search_document(self, query, k):
         return self.chroma_obj.similarity_search_with_score(query, k=k)
-

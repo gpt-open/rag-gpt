@@ -4,20 +4,109 @@ import aiosqlite
 import asyncio
 import json
 import os
+import re
 import time
 from urllib.parse import urljoin, urlparse
+import html2text
 from bs4 import BeautifulSoup
 from utils.logger_config import my_logger as logger
 
 
+def add_base_url_to_links(markdown_content, base_url):
+    # Define the regex pattern for Markdown links
+    link_pattern = re.compile(r'\[([^\]]+)\]\((?!http)([^)]+)\)')
+
+    # Function to replace links
+    def replace_link(match):
+        text = match.group(1)
+        link = match.group(2)
+        # Check if the link already contains a complete protocol or special protocol like mailto:
+        if not link.startswith(('http://', 'https://', '#', 'mailto:', 'tel:')):
+            # Only process relative links that start with '/'
+            if link.startswith('/'):
+                # Append the base URL in front of the link
+                link = base_url + link
+        return f'[{text}]({link})'
+
+    # Replace all relative links in the text
+    processed_content = link_pattern.sub(replace_link, markdown_content)
+    return processed_content
+
+def split_long_section(section, max_length=1536):
+    lines = section.split('\n')
+    current_section = ""
+    result = []
+    for line in lines:
+        # Add 1 for newline character when checking the length
+        if len(current_section) + len(line) + 1 > max_length:
+            if current_section:
+                result.append(current_section)
+                current_section = line  # Start a new paragraph
+            else:
+                # If a single line exceeds max length, treat it as its own paragraph
+                result.append(line)
+        else:
+            if current_section:
+                current_section += '\n' + line
+            else:
+                current_section = line
+
+    if current_section:  # Do not forget to add the last segment
+        result.append(current_section)
+    return result
+
+def split_markdown(content, max_length=1536):
+    # Split content at places with at least two consecutive newline characters
+    sections = re.split(r'\n{2,}', content)
+
+    result = []
+    temp_section = ""
+    for section in sections:
+        lines = section.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Ignore lines that only contain spaces or tabs
+            if line.strip() == "":
+                continue
+            cleaned_lines.append(line)
+        section = "\n".join(cleaned_lines)  # Reassemble the cleaned-up paragraph
+
+        # Check if the combined length of sections exceeds the max length
+        if len(temp_section) + len(section) + 1 <= max_length:  # +1 for a newline character
+            if temp_section:
+                temp_section += "\n" + section
+            else:
+                temp_section = section
+        else:
+            if temp_section:
+                result.extend(split_long_section(temp_section, max_length))
+                temp_section = section
+            else:
+                result.extend(split_long_section(section, max_length))
+
+    # Ensure the last part is added
+    if temp_section:
+        result.append(temp_section)
+
+    final_result = []
+    last_lines = ""
+    for section in result:
+        lines = section.split('\n')
+        last_two_lines = "\n".join(lines[-2:])  # Extract the last two lines
+        combined_section = last_lines + "\n" + section if last_lines else section
+        final_result.append(combined_section)
+        last_lines = last_two_lines
+    return final_result
+
+
 class AsyncCrawlerSiteContent:
 
-    def __init__(self, domain_list, sqlite_db_path, max_requests, max_embedding_input, document_embedder_obj, distributed_lock):
+    def __init__(self, domain_list, sqlite_db_path, max_requests, max_chunk_length, document_embedder_obj, distributed_lock):
         logger.info(f"[CRAWL_CONTENT] init, domain_list:{domain_list}")
         self.domain_list = domain_list
         self.sqlite_db_path = sqlite_db_path
         self.semaphore = asyncio.Semaphore(max_requests)
-        self.max_embedding_input = max_embedding_input
+        self.max_chunk_length = max_chunk_length
         self.document_embedder_obj = document_embedder_obj
         self.distributed_lock = distributed_lock
         self.count = 0
@@ -35,66 +124,24 @@ class AsyncCrawlerSiteContent:
 
     async def parse_content(self, html, url):
         logger.info(f"[CRAWL_CONTENT] parse_content, url:'{url}'")
-        chunk_text_vec = []
-        max_token_len = self.max_embedding_input
         try:
+            # Use BeautifulSoup to parse HTML content
             soup = BeautifulSoup(html, 'html.parser')
 
-            # Extract title text
-            title_text = soup.title.string.strip() if soup.title else ""
-            curr_chunk = title_text + '\n'
-            curr_len = len(title_text)
+            # Assume we convert the entire <body> section
+            body_content = soup.find('body')
 
-            # Remove <script> and <style> elements before extracting text
-            for script_or_style in soup(['script', 'style', 'head', 'meta', 'link']):
-                script_or_style.decompose()
+            # Create an html2text converter
+            h = html2text.HTML2Text()
+            # Convert HTML to Markdown
+            markdown_content = h.handle(str(body_content))
 
-            # Find all elements whose class names start with "footer" and remove them
-            footer_elements = soup.find_all(class_=lambda value: value and value.startswith('footer'))
-            for element in footer_elements:
-                element.decompose()
+            # Retrieve the base URL
+            parsed_url = urlparse(url)
+            base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            processed_markdown = add_base_url_to_links(markdown_content, base_url)
 
-            # Find all elements whose class names start with "navbar" and remove them
-            #navbar_elements = soup.find_all(class_=lambda value: value and value.startswith('navbar'))
-            #for element in navbar_elements:
-            #    element.decompose()
-
-            last_element_text = ''
-            if soup.body:
-                for element in soup.body.descendants:
-                    element_text = ''
-                    if element.name == 'a' and element.get('href'):
-                        href = element['href']
-                        # Check if href is an external link
-                        if href.startswith('http://') or href.startswith('https://'):
-                            text = element.get_text(strip=True)
-                            # Embed the link directly in the text
-                            element_text = f"{text}[{href}]"
-                        else:
-                            # For relative URLs, just include the text
-                            element_text = element.get_text(strip=True)
-                    elif element.string and not element.name:
-                        # Append non-link text
-                        element_text = element.string.strip()
-
-                    if element_text:
-                        element_len = len(element_text)
-                        if element_len > max_token_len:
-                            logger.warning(f"[CRAWL_CONTENG] parse_conteng, url:'{url}', warning element_len={element_len}")
-
-                        if curr_len + element_len <= max_token_len:
-                            curr_chunk += element_text
-                            curr_chunk += '\n'
-                            curr_len += element_len + 1
-                        else:
-                            chunk_text_vec.append(curr_chunk)
-                            curr_chunk = last_element_text + '\n' + element_text + '\n'
-                            curr_len = len(curr_chunk)
-                        last_element_text = element_text
-
-                if curr_chunk:
-                    chunk_text_vec.append(curr_chunk)
-
+            chunk_text_vec = split_markdown(processed_markdown, self.max_chunk_length)
             return chunk_text_vec
         except Exception as e:
             logger.error(f"[CRAWL_CONTENG] parse_content, url:'{url}', Error processing content exception:{str(e)}")
