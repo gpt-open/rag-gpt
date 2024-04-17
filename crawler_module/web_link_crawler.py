@@ -204,4 +204,3 @@ class AsyncCrawlerSiteLink:
         end_time = int(time.time())
         timecost = end_time - begin_time
         logger.info(f"[CRAWL_LINK] run end! base_url:'{self.base_url}', end_time:{end_time}, timecost:{timecost}")
-
