@@ -15,5 +15,5 @@ MAX_HISTORY_SESSION_LENGTH=3
 SESSION_EXPIRE_TIME=10800
 SITE_TITLE="your site title"
 STATIC_DIR="web"
-URL_PREFIX="http://127.0.0.1:7000/"
+URL_PREFIX="http://your-server-ip:7000/"
 MEDIA_DIR="media_dir"
