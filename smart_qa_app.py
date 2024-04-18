@@ -370,11 +370,12 @@ def smart_query():
         timecost = time.time() - beg
         answer_json = json.loads(answer)
         answer_json["source"] = list(dict.fromkeys(answer_json["source"]))
+        logger.success(f"query:'{query}' and user_id:'{user_id}' is processed successfully, the answer is {answer}\nthe total timecost is {timecost}\n")
         if not answer_json["source"]:
             is_adjust, adjust_answer = postprocessing_llm_answer(query, answer, SITE_TITLE)
             if is_adjust:
                 answer_json["answer"] = adjust_answer
-        logger.success(f"query:'{query}' and user_id:'{user_id}' is processed successfully, the answer is {answer}\nthe total timecost is {timecost}\n")
+                answer = json.dumps(answer_json)
         save_user_query_history(user_id, query, answer)
         return jsonify({"retcode": 0, "message": "success", "data": answer_json})
     except Exception as e:
