@@ -40,7 +40,7 @@ OPENAI_EMBEDDING_MODEL_NAME = os.getenv('OPENAI_EMBEDDING_MODEL_NAME', 'text-emb
 MAX_CHUNK_LENGTH = int(os.getenv('MAX_CHUNK_LENGTH', '1300'))
 MAX_QUERY_LENGTH = int(os.getenv('MAX_QUERY_LENGTH', '200'))
 RECALL_TOP_K = int(os.getenv('RECALL_TOP_K', '3'))
-COSINE_SIMILARITY_MAX_SCORE = float(os.getenv('COSINE_SIMILARITY_MAX_SCORE', '0.6'))
+MIN_RELEVANCE_SCORE = float(os.getenv('MIN_RELEVANCE_SCORE', '0.5'))
 MAX_HISTORY_SESSION_LENGTH = int(os.getenv('MAX_HISTORY_SESSION_LENGTH', '3'))
 SESSION_EXPIRE_TIME = int(os.getenv('SESSION_EXPIRE_TIME', '10800'))
 SITE_TITLE = os.getenv('SITE_TITLE', 'your_site_title')
@@ -182,7 +182,7 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
     site_title = SITE_TITLE
 
     unfiltered_context = "\n--------------------\n".join([
-        f"URL: {doc.metadata['source']}\nCosine similarity score: {score}\nContent: {doc.page_content}"
+        f"URL: {doc.metadata['source']}\nRevelance score: {score}\nContent: {doc.page_content}"
         for doc, score in results
     ])
     logger.info(f"for the query:'{query}' and user_id:'{user_id}'\nunfiltered_context={unfiltered_context}\nthe timecost of search_document is {timecost}")
@@ -193,14 +193,14 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
     history_context = "\n--------------------\n".join([f"Previous Query: {item['query']}\nPrevious Answer: {item['answer']}" for item in history_session])
 
     # Build the context for prompt
-    filtered_results = [(doc, score) for doc, score in results if score < COSINE_SIMILARITY_MAX_SCORE]
+    filtered_results = [(doc, score) for doc, score in results if score > MIN_RELEVANCE_SCORE]
     if filtered_results:
         filtered_context = "\n--------------------\n".join([
-            f"URL: {doc.metadata['source']}\nCosine similarity score: {score}\nContent: {doc.page_content}"
+            f"URL: {doc.metadata['source']}\nRevelance score: {score}\nContent: {doc.page_content}"
             for doc, score in filtered_results
         ])
         context = f"""Documents size: {len(filtered_results)}
-Documents:
+Documents(Sort by Relevance Score from high to low):
 {filtered_context}"""
     else:
         context = f"""Documents size: 0
@@ -221,9 +221,10 @@ Responses from the bot take into account the user's previous interactions, adapt
 
 Given the documents listed below and the user's query history, please provide accurate and detailed answers in the query's language. The response should be in JSON, with 'answer' and 'source' fields. Answers must be based on these documents and directly relevant to the `{site_title}` website. If the query is unrelated to the documents, inform the user that answers cannot be provided.
 
+User ID: "{user_id}"
 Query: "{query}"
 
-User Query History:
+User Query History(Sort by request time from most recent to oldest):
 {history_context}
 
 {context}

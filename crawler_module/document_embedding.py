@@ -52,4 +52,4 @@ class DocumentEmbedder:
         return self.chroma_obj.delete(embedding_id_vec)
 
     def search_document(self, query, k):
-        return self.chroma_obj.similarity_search_with_score(query, k=k)
+        return self.chroma_obj.similarity_search_with_relevance_scores(query, k=k)
