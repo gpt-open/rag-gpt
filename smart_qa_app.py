@@ -205,7 +205,14 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
     history_context = "\n--------------------\n".join([f"Previous Query: {item['query']}\nPrevious Answer: {item['answer']}" for item in history_session])
 
     # Build the context for prompt
-    filtered_results = [(doc, score) for doc, score in results if score > MIN_RELEVANCE_SCORE]
+    recall_domain_set = set()
+    filtered_results = []
+    for doc, score in results:
+        if score > MIN_RELEVANCE_SCORE:
+            filtered_results.append((doc, score))
+            domain = urlparse(doc.metadata['source']).netloc
+            recall_domain_set.add(domain)
+
     if filtered_results:
         filtered_context = "\n--------------------\n".join([
             f"URL: {doc.metadata['source']}\nRevelance score: {score}\nContent: {doc.page_content}"
@@ -220,7 +227,6 @@ No documents found directly related to the current query.
 If the query is similar to greeting phrases like ['Hi', 'Hello', 'Who are you?'], including greetings in other languages such as Chinese, Russian, French, Spanish, German, Japanese, Arabic, Hindi, Portuguese, Korean, etc. The bot will offer a friendly standard response, guiding users to seek information or services detailed on the `{site_title}` website.
 For other queries, please give the answer "Unfortunately, there is no information available about '{query}' on the `{site_title}` website. I'm here to assist you with information related to the `{site_title}` website. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
 """
-
 
     prompt = f"""
 This smart customer service bot is designed to provide users with information directly related to the `{site_title}` website's content. It employs a combination of Large Language Model (LLM) and Retriever-Augmented Generation (RAG) technologies to accurately identify the most relevant documents for user queries, thereby ensuring responses are both contextually pertinent and timely.
@@ -259,6 +265,7 @@ Please format your response as follows:
 
 Please format `answer` as follows:
 The `answer` must be fully formatted using Markdown syntax to ensure proper rendering in the browser or APP. This includes:
+- The `answer` must not be identical to the `query`.
 - **Bold** (`**bold**`) and *italic* (`*italic*`) text for emphasis.
 - Unordered lists (`- item`) for itemization and ordered lists (`1. item`) for sequencing.
 - `Inline code` (`` `Inline code` ``) for brief code snippets and (` ``` `) for longer examples, specifying the programming language for syntax highlighting when possible.
@@ -277,7 +284,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
         top_p=0.9,
         stream=is_streaming
     )
-    return response
+    return response, recall_domain_set
 
 
 def save_user_query_history(user_id, query, answer):
@@ -336,12 +343,33 @@ def check_smart_query(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def postprocessing_llm_answer(query, answer, site_title):
-    if site_title not in answer:
-        adjust_answer = f"Unfortunately, there is no information available about '{query}' on the `{site_title}` website. I'm here to assist you with information related to the `{site_title}` website. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
-        logger.warning(f"adjust_answer:'{adjust_answer}'")
-        return True, adjust_answer
-    return False, answer
+def postprocessing_llm_response(query, answer_json, site_title, recall_domain_set):
+    if answer_json['source']:
+        answer_json['source'] = list(dict.fromkeys(answer_json['source']))
+
+    is_adjusted = False
+    adjust_source = []
+    for url in answer_json['source']:
+        domain = urlparse(url).netloc
+        if domain in recall_domain_set:
+            adjust_source.append(url)
+        else:
+            logger.warning(f"url:'{url}' is not in {recall_domain_set}, it should not be returned!")
+            if not is_adjusted:
+                is_adjusted = True
+
+    if is_adjusted:
+        answer_json['source'] = adjust_source
+        logger.warning(f"adjust_source:{adjust_source}")
+
+    if not adjust_source:
+        if site_title not in answer_json['answer']:
+            adjust_answer = f"Unfortunately, there is no information available about '{query}' on the `{site_title}` website. I'm here to assist you with information related to the `{site_title}` website. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
+            logger.warning(f"adjust_answer:'{adjust_answer}'")
+            if not is_adjusted:
+                is_adjusted = True
+            answer_json['answer'] = adjust_answer
+    return is_adjusted
 
 @app.route('/open_kf_api/smart_query', methods=['POST'])
 @check_smart_query
@@ -364,18 +392,16 @@ def smart_query():
         #    query += "?"
 
         beg = time.time()
-        response = search_and_answer(query, user_id)
+        response, recall_domain_set = search_and_answer(query, user_id)
         answer = response.choices[0].message.content
 
         timecost = time.time() - beg
         answer_json = json.loads(answer)
         answer_json["source"] = list(dict.fromkeys(answer_json["source"]))
         logger.success(f"query:'{query}' and user_id:'{user_id}' is processed successfully, the answer is {answer}\nthe total timecost is {timecost}\n")
-        if not answer_json["source"]:
-            is_adjust, adjust_answer = postprocessing_llm_answer(query, answer, SITE_TITLE)
-            if is_adjust:
-                answer_json["answer"] = adjust_answer
-                answer = json.dumps(answer_json)
+        is_adjusted = postprocessing_llm_response(query, answer_json, SITE_TITLE, recall_domain_set)
+        if is_adjusted:
+            answer = json.dumps(answer_json)
         save_user_query_history(user_id, query, answer)
         return jsonify({"retcode": 0, "message": "success", "data": answer_json})
     except Exception as e:
