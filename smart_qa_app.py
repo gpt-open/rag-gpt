@@ -174,12 +174,24 @@ def get_user_query_history(user_id):
     history = [json.loads(item) for item in history_items]
     return history
 
+def preprocess_query(query, site_title):
+    # Convert to lowercase for case-insensitive comparison
+    query_lower = query.lower()
+    site_title_lower = site_title.lower()
+    # Check if the site title is already included in the query
+    if site_title_lower not in query_lower:
+        adjust_query =  f"{query}\t{site_title}"
+        logger.warning(f"adjust_query:'{adjust_query}'")
+        return adjust_query
+    return query
+
 def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
+    site_title = SITE_TITLE
     # Perform similarity search
     beg = time.time()
-    results = g_document_embedder.search_document(query, k)
+    adjust_query = preprocess_query(query, site_title)
+    results = g_document_embedder.search_document(adjust_query, k)
     timecost = time.time() - beg
-    site_title = SITE_TITLE
 
     unfiltered_context = "\n--------------------\n".join([
         f"URL: {doc.metadata['source']}\nRevelance score: {score}\nContent: {doc.page_content}"
@@ -324,6 +336,13 @@ def check_smart_query(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def postprocessing_llm_answer(query, answer, site_title):
+    if site_title not in answer:
+        adjust_answer = f"Unfortunately, there is no information available about '{query}' on the `{site_title}` website. I'm here to assist you with information related to the `{site_title}` website. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
+        logger.warning(f"adjust_answer:'{adjust_answer}'")
+        return True, adjust_answer
+    return False, answer
+
 @app.route('/open_kf_api/smart_query', methods=['POST'])
 @check_smart_query
 @token_required
@@ -351,6 +370,10 @@ def smart_query():
         timecost = time.time() - beg
         answer_json = json.loads(answer)
         answer_json["source"] = list(dict.fromkeys(answer_json["source"]))
+        if not answer_json["source"]:
+            is_adjust, adjust_answer = postprocessing_llm_answer(query, answer, SITE_TITLE)
+            if is_adjust:
+                answer_json["answer"] = adjust_answer
         logger.success(f"query:'{query}' and user_id:'{user_id}' is processed successfully, the answer is {answer}\nthe total timecost is {timecost}\n")
         save_user_query_history(user_id, query, answer)
         return jsonify({"retcode": 0, "message": "success", "data": answer_json})
