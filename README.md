@@ -145,16 +145,28 @@ On the page **`http://your-server-ip:7000/open-kf-admin/#/`**, you can set the f
 
 ### 2. Import your data
 
-After submitting the website URL, once the server retrieves the list of all web page URLs via crawling, you can select the web page URLs you need as the knowledge base (all selected by default).
+After submitting the website URL, once the server retrieves the list of all web page URLs via crawling, you can select the web page URLs you need as the knowledge base (all selected by default). The initial `Status` is **`Recorded`**.
 
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-4.jpg">
 </div>
 
-You can actively refresh the page **`http://your-server-ip:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of theweb page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Stored`**.
+You can actively refresh the page **`http://your-server-ip:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of the web page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Stored`**.
 
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-5.jpg">
+</div>
+
+Clicking on a webpage's URL reveals how many sub-pages the webpage is divided into, and the text size of each sub-page.
+
+<div align="center">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-10.jpg">
+</div>
+
+Clicking on a sub-page allows you to view its full text content. This will be very helpful for verifying the effects during the experience testing process.
+
+<div align="center">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-11.jpg">
 </div>
 
 ### 3. Test the chatbot
@@ -180,7 +192,7 @@ Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/emb
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-8.jpg">
 </div>
 
-### 5. View the user's chatbot visit history
+### 5. Dashboard of user's historical request
 
 Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/dashboard`**, you can view the historical request records of all users within a specified time range.
 
