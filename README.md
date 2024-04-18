@@ -49,7 +49,7 @@ MEDIA_DIR="media_dir"
 ```
 
 - Modify the **`OPENAI_API_KEY`** with your own key. Please log in to the [OpenAI website](https://platform.openai.com/api-keys) to view your API Key.
-- Change **`SITE_TITLE`** to reflect your website's name. This is very important, as it will be used in **query rewriting** and **result rewriting**. Please try to use a concise and clear word, such as `OpenIM`.
+- Change **`SITE_TITLE`** to reflect your website's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` if you wish to use GPT-4 Turbo.
 - The relevance score used for document retrieval is a numerical value between 0 and 1, typically used to indicate the degree of match or confidence. The closer the score is to 1, the more relevant or accurate the match. By adjusting **`MIN_RELEVANCE_SCORE`**, documents with lower relevance can be filtered out. Please adjust this parameter appropriately based on request logs.
