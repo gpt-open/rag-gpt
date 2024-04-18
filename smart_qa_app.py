@@ -185,13 +185,12 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
         f"URL: {doc.metadata['source']}\nCosine similarity score: {score}\nContent: {doc.page_content}"
         for doc, score in results
     ])
+    logger.info(f"for the query:'{query}' and user_id:'{user_id}'\nunfiltered_context={unfiltered_context}\nthe timecost of search_document is {timecost}")
 
     # Get history session from Cache
     history_session = get_user_query_history(user_id)
     # Build the history_context for prompt
     history_context = "\n--------------------\n".join([f"Previous Query: {item['query']}\nPrevious Answer: {item['answer']}" for item in history_session])
-
-    logger.info(f"for the query:'{query}' and user_id:'{user_id}'\nunfiltered_context={unfiltered_context}\nhistory_context={history_context}\nthe timecost of search_document is {timecost}")
 
     # Build the context for prompt
     filtered_results = [(doc, score) for doc, score in results if score < COSINE_SIMILARITY_MAX_SCORE]
@@ -204,22 +203,20 @@ def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
 Documents:
 {filtered_context}"""
     else:
-        # Decide the response based on history relevance
-        if history_session:
-            context = f"""Documents size: 0
-No documents found directly related to the current query. We can first assess whether the current query is related 'User Query History'.
-If it is related, we can use the historical request information to organize an answer relevant to the `{site_title}` website's content.
-If it is not related, we will guide the user to ask questions relevant to the `{site_title}` website's content."""
-        else:
-            context = f"""Documents size: 0
-We could not find any documents related to the query. We will guide the user to ask questions relevant to the `{site_title}` website's content."""
+        context = f"""Documents size: 0
+No documents found directly related to the current query.
+The bot should guide the user to seek information or services detailed on the `{site_title}` website.
+If the query is similar to greeting phrases like ['Hi', 'Hello', 'Who are you?'], including greetings in other languages such as Chinese, Russian, French, Spanish, German, Japanese, Arabic, Hindi, Portuguese, Korean, etc. The bot will offer a friendly standard response, guiding users to seek information or services detailed on the `{site_title}` website.
+For other queries, please give the answer "Unfortunately, there is no information available about '{query}' on the `{site_title}` website. I'm here to assist you with information related to the `{site_title}` website. If you have any specific questions about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
+"""
+
 
     prompt = f"""
 This smart customer service bot is designed to provide users with information directly related to the `{site_title}` website's content. It employs a combination of Large Language Model (LLM) and Retriever-Augmented Generation (RAG) technologies to accurately identify the most relevant documents for user queries, thereby ensuring responses are both contextually pertinent and timely.
 
 The system focuses on queries specifically related to the content of the `{site_title}` website, and will inform users when a query falls outside of this scope. It does not answer general knowledge questions based on the LLM's pre-existing knowledge unrelated to the site. Instead, users are encouraged to ask questions directly concerning the website's content.
 
-For generic inquiries such as "Hello" or "Who are you?", instead of using document recall, the bot will offer a friendly standard response, guiding users to seek information or services detailed on the `{site_title}` website.
+If the query is similar to greeting phrases like ['Hi', 'Hello', 'Who are you?'], including greetings in other languages such as Chinese, Russian, French, Spanish, German, Japanese, Arabic, Hindi, Portuguese, Korean, etc. Instead of using document recall, the bot will offer a friendly standard response, guiding users to seek information or services detailed on the `{site_title}` website.
 
 Responses from the bot take into account the user's previous interactions, adapting to their potential interests or previous unanswered questions. It strives not only to provide answers but to offer comprehensive insights, including URLs, steps, example codes, and more, as necessary.
 
@@ -233,6 +230,8 @@ User Query History:
 {history_context}
 
 {context}
+
+The most important instruction: Please do not provide any answers unrelated to the {site_title} website! Regardless of whether you know the answer or not! This instruction must be followed!
 
 Response Requirements:
 - If unsure about the answer, proactively seek clarification.
@@ -257,7 +256,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
 - Headings (`# Heading 1`, `## Heading 2`, ...) to structure the answer effectively.
 """
 
-    #logger.info(f"prompt={prompt}")
+    logger.info(f"prompt={prompt}")
 
     # Call GPT model to generate an answer
     response = g_client.chat.completions.create(
