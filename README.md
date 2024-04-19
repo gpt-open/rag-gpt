@@ -1,5 +1,5 @@
 <div align="center">
-<h1 align="center">Smart QA Service</h1>
+<h1 align="center">RAG-GPT</h1>
 Quickly launch an intelligent customer service system with Flask, LLM, RAG, including frontend, backend, and admin console.
 <br/>
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-1.jpg">
@@ -13,7 +13,7 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 Clone the repository:
 
 ```shell
-git clone https://github.com/open-kf/smart-qa-service.git && cd smart-qa-service
+git clone https://github.com/open-kf/rag-gpt.git && cd rag-gpt
 ```
 
 ### 2. Configure variables of .env
@@ -103,7 +103,7 @@ If you have completed the steps above, you can try to start the OpenKF service b
 - **Start single process:**
 
 ```shell
-python3 smart_qa_app.py
+python3 rag_gpt_app.py
 ```
 
 - **Start multiple processes:**
