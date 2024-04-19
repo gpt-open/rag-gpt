@@ -6,6 +6,14 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 </div>
 
 
+
+## Online Retrieval Architecture
+
+<div align="center">
+<img style="display: block; margin: auto; width: 100%;" src="./doc/online_retrieve.jpg">
+</div>
+
+
 ## Deploy the OpenKF Service
 
 ### 1. Download repository code

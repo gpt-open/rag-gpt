@@ -284,6 +284,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
         top_p=0.9,
         stream=is_streaming
     )
+    logger.warning(f"[Track token consumption] for query='{query}', usage={response.usage}")
     return response, recall_domain_set
 
 
