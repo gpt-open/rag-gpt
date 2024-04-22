@@ -281,7 +281,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
         response_format={ "type": "json_object" },
         messages=[{"role": "system", "content": prompt}],
         temperature=0,
-        top_p=0.9,
+        top_p=0.7,
         stream=is_streaming
     )
     logger.warning(f"[Track token consumption] for query='{query}', usage={response.usage}")
