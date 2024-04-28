@@ -2,9 +2,16 @@
 <h1 align="center">RAG-GPT</h1>
 Quickly launch an intelligent customer service system with Flask, LLM, RAG, including frontend, backend, and admin console.
 <br/>
-<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-1.jpg">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/rag_overview.jpg">
 </div>
 
+
+## Features
+- **Built-in LLM Support**: Provides integrated support for large language models.
+- **Quick Setup**: Enables deployment of production-level conversational service robots within just five minutes.
+- **Simple Maintenance**: Only requires Python, with no need for additional middleware.
+- **Flexible Configuration**: Offers a user-friendly backend equipped with customizable settings for streamlined management.
+- **Attractive UI**: Features a customizable and visually appealing user interface.
 
 
 ## Online Retrieval Architecture
