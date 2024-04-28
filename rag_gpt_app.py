@@ -355,7 +355,7 @@ def postprocessing_llm_response(query, answer_json, site_title, recall_domain_se
         if domain in recall_domain_set:
             adjust_source.append(url)
         else:
-            logger.warning(f"url:'{url}' is not in {recall_domain_set}, it should not be returned!")
+            logger.warning(f"The domain of url:'{url}' is '{domain}', it is not in {recall_domain_set}, it should not be returned!")
             if not is_adjusted:
                 is_adjusted = True
 
