@@ -187,6 +187,7 @@ def preprocess_query(query, site_title):
 
 def search_and_answer(query, user_id, k=RECALL_TOP_K, is_streaming=False):
     site_title = SITE_TITLE
+
     # Perform similarity search
     beg = time.time()
     adjust_query = preprocess_query(query, site_title)
@@ -381,7 +382,8 @@ def smart_query():
         query = request.query
         intervene_data = request.intervene_data
         if intervene_data:
-            save_user_query_history(user_id, query, intervene_data)
+            # Start a new thread to execute saving history records asynchronously
+            Thread(target=save_user_query_history, args=(user_id, query, intervene_data)).start()
             intervene_data_json = json.loads(intervene_data)
             return jsonify({"retcode": 0, "message": "success", "data": intervene_data_json})
 
@@ -403,7 +405,8 @@ def smart_query():
         is_adjusted = postprocessing_llm_response(query, answer_json, SITE_TITLE, recall_domain_set)
         if is_adjusted:
             answer = json.dumps(answer_json)
-        save_user_query_history(user_id, query, answer)
+        # Start another new thread to execute saving history records asynchronously
+        Thread(target=save_user_query_history, args=(user_id, query, answer)).start()
         return jsonify({"retcode": 0, "message": "success", "data": answer_json})
     except Exception as e:
         logger.error(f"query:'{query}' and user_id:'{user_id}' is processed failed, the exception is {e}")
