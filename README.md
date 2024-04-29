@@ -2,6 +2,8 @@
 <h1 align="center">RAG-GPT</h1>
 Quickly launch an intelligent customer service system with Flask, LLM, RAG, including frontend, backend, and admin console.
 <br/>
+<a href="https://demo.rentsoft.cn/" target="_blank"> Live Demo </a>
+<br/>
 <img style="display: block; margin: auto; width: 70%;" src="./doc/rag_overview.jpg">
 </div>
 
@@ -21,7 +23,7 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 </div>
 
 
-## Deploy the OpenKF Service
+## Deploy the RAG-GPT Service
 
 ### 1. Download repository code
 
@@ -33,7 +35,7 @@ git clone https://github.com/open-kf/rag-gpt.git && cd rag-gpt
 
 ### 2. Configure variables of .env
 
-Before starting the OpenKF service, you need to modify the related configurations for the program to initialize correctly. 
+Before starting the RAG-GPT service, you need to modify the related configurations for the program to initialize correctly. 
 
 ```shell
 cp env_template .env
@@ -69,13 +71,13 @@ MEDIA_DIR="media_dir"
 - Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` if you wish to use GPT-4 Turbo.
 - The relevance score used for document retrieval is a numerical value between 0 and 1, typically used to indicate the degree of match or confidence. The closer the score is to 1, the more relevant or accurate the match. By adjusting **`MIN_RELEVANCE_SCORE`**, documents with lower relevance can be filtered out. Please adjust this parameter appropriately based on request logs.
 
-### 3. Deploy OpenKF using Docker
+### 3. Deploy RAG-GPT using Docker
 
 ```shell
 docker-compose up --build
 ```
 
-### 4. Deploy OpenKF from source code
+### 4. Deploy RAG-GPT from source code
 
 ####  4.1 Set up the Python running environment
 
@@ -105,7 +107,7 @@ pip install -r requirements.txt
 
 #### 4.2 Create SQLite Database
 
-The OpenKF service uses SQLite as its storage DB. Before starting the OpenKF service, you need to execute the following command to initialize the database and add the default configuration for admin console.
+The RAG-GPT service uses SQLite as its storage DB. Before starting the RAG-GPT service, you need to execute the following command to initialize the database and add the default configuration for admin console.
 
 ```shell
 python3 create_sqlite_db.py
@@ -113,7 +115,7 @@ python3 create_sqlite_db.py
 
 #### 4.3 Start the service
 
-If you have completed the steps above, you can try to start the OpenKF service by executing the following command.
+If you have completed the steps above, you can try to start the RAG-GPT service by executing the following command.
 
 - **Start single process:**
 
@@ -128,8 +130,8 @@ sh start.sh
 ```
 
 > [!NOTE]
-> - The service port for OpenKF is **`7000`**. During the first test, please try not to change the port so that you can quickly experience the entire product process.
-> - We recommend starting the OpenKF service using **`start.sh`** in multi-process mode for a smoother user experience.
+> - The service port for RAG-GPT is **`7000`**. During the first test, please try not to change the port so that you can quickly experience the entire product process.
+> - We recommend starting the RAG-GPT service using **`start.sh`** in multi-process mode for a smoother user experience.
 
 
 
@@ -217,7 +219,7 @@ Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/das
 
 
 ## The frontend of admin console and chatbot
-The OpenKF service integrates 2 frontend modules, and their source code information is as follows:
+The RAG-GPT service integrates 2 frontend modules, and their source code information is as follows:
 
 ### admin console
 > [Code Repository](https://github.com/open-kf/smart-qa-admin)
