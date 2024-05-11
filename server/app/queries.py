@@ -162,7 +162,7 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
 
     filter_context = ''
     # Build the context with filtered documents, showing relevant documents
-    if USE_RERANKING:
+    if USE_RERANKING and results:
         # Rerank the documents
         rerank_results = rerank_documents(adjust_query, results)
         filter_rerank_results, recall_domain_set = filter_rerank_documents(rerank_results, MIN_RELEVANCE_SCORE)

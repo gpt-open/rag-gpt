@@ -325,8 +325,8 @@ class AsyncCrawlerSiteContent:
                 with self.distributed_lock.lock():
                     if embedding_id_vec:
                         logger.info(f"[CRAWL_CONTENT] _delete_embedding_doc, document_embedder.delete_document_embedding: {embedding_id_vec}")
-                        #document_embedder.delete_document_embedding(embedding_id_vec)
-                        await document_embedder.adelete_document_embedding(embedding_id_vec)
+                        document_embedder.delete_document_embedding(embedding_id_vec)
+                        #await document_embedder.adelete_document_embedding(embedding_id_vec)
 
                     # Delete records from t_doc_embedding_map_tab
                     await db.execute(f"DELETE FROM t_doc_embedding_map_tab WHERE doc_source = ? and doc_id IN ({placeholder})", [self.doc_source] + doc_id_vec)

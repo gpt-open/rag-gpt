@@ -152,7 +152,6 @@ def submit_local_file_list():
                 return {'retcode': -20002, 'message': f'File {file_.filename} is empty!'}
             
             _, file_extension = os.path.splitext(file_.filename)
-            logger.error(f"!!!filename: {file_.filename}")
             if file_extension.lower() not in FILE_LOADER_EXTENSIONS:
                 return {'retcode': -20003, 'message': f'Unsupported file extension {file_extension} for {file_.filename}'}
             

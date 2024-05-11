@@ -10,7 +10,8 @@ from server.rag.index.embedder.document_embedder import document_embedder
 
 
 class AsyncTextParser:
-    BATCH_SIZE = 30
+    ADD_BATCH_SIZE = 30
+    DELETE_BATCH_SIZE = 100
 
     def __init__(self) -> None:
         self.max_chunk_length = MAX_CHUNK_LENGTH
@@ -33,7 +34,7 @@ class AsyncTextParser:
                     )
                     await db.commit()
             except Exception as e:
-                logger.error(f"process distributed_lock exception: {e}")
+                logger.error(f"Process distributed_lock exception: {e}")
 
     async def add_local_file_chunk(self, file_id: int, chunk_text_vec: List[str], start_index: int) -> None:
         logger.info(f"[FILE_CONTENT] add_local_file_chunk, file_id: {file_id}, start_index: {start_index}")
@@ -55,7 +56,7 @@ class AsyncTextParser:
                     )
                     await db.commit()
             except Exception as e:
-                logger.error(f"process distributed_lock exception: {e}")
+                logger.error(f"Process distributed_lock exception: {e}")
 
     async def add_content(self, doc_id: int, content: str, url: str) -> None:
         if not content:
@@ -74,8 +75,8 @@ class AsyncTextParser:
         await self.update_doc_status(doc_id, LOCAL_FILE_PARSING_COMPLETED)
 
         embedding_id_vec = []
-        for start in range(0, len(chunk_text_vec), self.BATCH_SIZE):
-            batch = chunk_text_vec[start:start + self.BATCH_SIZE]
+        for start in range(0, len(chunk_text_vec), self.ADD_BATCH_SIZE):
+            batch = chunk_text_vec[start:start + self.ADD_BATCH_SIZE]
 
             await self.add_local_file_chunk(doc_id, batch, start)
 
@@ -85,7 +86,7 @@ class AsyncTextParser:
                     if ret:
                         embedding_id_vec.extend(ret)
             except Exception as e:
-                logger.error(f"process distributed_lock exception: {e}")
+                logger.error(f"Process distributed_lock exception: {e}")
 
         if embedding_id_vec:
             await self.update_doc_status(doc_id, LOCAL_FILE_EMBEDDED)
@@ -103,7 +104,7 @@ class AsyncTextParser:
                         )
                         await db.commit()
             except Exception as e:
-                logger.error(f"process distributed_lock exception: {e}")
+                logger.error(f"Process distributed_lock exception: {e}")
 
         end_time = int(time.time())
         timecost = end_time - begin_time
@@ -124,7 +125,7 @@ class AsyncTextParser:
                     await db.execute(f"DELETE FROM t_local_file_tab WHERE id = ?", (doc_id,))
                     await db.commit()
             except Exception as e:
-                logger.error(f"process distributed_lock exception: {e}")
+                logger.error(f"Process distributed_lock exception: {e}")
 
         end_time = int(time.time())
         timecost = end_time - begin_time
@@ -145,16 +146,22 @@ class AsyncTextParser:
 
             try:
                 with self.distributed_lock.lock():
-                    if embedding_id_vec:
-                        logger.info(f"[CRAWL_CONTENT] _delete_embedding_doc, document_embedder.delete_document_embedding: {embedding_id_vec}")
-                        #document_embedder.delete_document_embedding(embedding_id_vec)
-                        await document_embedder.adelete_document_embedding(embedding_id_vec)
-
                     # Delete records from t_doc_embedding_map_tab
                     await db.execute(
                         f"DELETE FROM t_doc_embedding_map_tab WHERE doc_source = ? and doc_id = ?",
-                        [self.doc_source, doc_id]
+                        (self.doc_source, doc_id)
                     )
                     await db.commit()
             except Exception as e:
-                logger.error(f"process distributed_lock exception: {e}")
+                logger.error(f"Process distributed_lock exception: {e}")
+
+            try:
+                for start in range(0, len(embedding_id_vec), self.DELETE_BATCH_SIZE):
+                    batch = embedding_id_vec[start:start + self.DELETE_BATCH_SIZE]
+                    if batch:
+                        with self.distributed_lock.lock():
+                            logger.info(f"[CRAWL_CONTENT] _delete_embedding_doc, document_embedder.delete_document_embedding: {batch}")
+                            document_embedder.delete_document_embedding(batch)
+                            #await document_embedder.adelete_document_embedding(batch)
+            except Exception as e:
+                logger.error(f"Process distributed_lock exception: {e}")
