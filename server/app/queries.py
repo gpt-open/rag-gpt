@@ -19,6 +19,8 @@ from server.rag.post_retrieval.rerank.flash_ranker import RerankRequest, reranke
 from server.rag.retrieval.vector_search import vector_search
 
 
+LLM_NAME = os.getenv('LLM_NAME')
+
 MIN_RELEVANCE_SCORE = float(os.getenv('MIN_RELEVANCE_SCORE', '0.3'))
 BOT_TOPIC = os.getenv('BOT_TOPIC')
 USE_PREPROCESS_QUERY = int(os.getenv('USE_PREPROCESS_QUERY'))
@@ -340,11 +342,14 @@ def smart_query():
         answer = response.choices[0].message.content
 
         #logger.warning(f"The answer is:\n{answer}")
-        # Solve the result format problem of ZhipuAI
-        if answer.startswith("```json"):
-            answer = answer[7:]
-            if answer.endswith("```"):
-                answer = answer[:-3]
+        if LLM_NAME == 'ZhipuAI':
+            #logger.warning(f"The answer is:\n{answer}")
+
+            # Solve the result format problem of ZhipuAI
+            if answer.startswith("```json"):
+                answer = answer[7:]
+                if answer.endswith("```"):
+                    answer = answer[:-3]
 
         timecost = time.time() - beg_time
         answer_json = json.loads(answer)
@@ -392,12 +397,16 @@ def smart_query_stream():
             answer_chunks = []
             response, _ = generate_answer(query, user_id, True)
             for chunk in response:
-                #logger.info(f"chunk is: {chunk}")
+                logger.info(f"chunk is: {chunk}")
                 content = chunk.choices[0].delta.content
                 if content:
                     answer_chunks.append(content)
                     # Send each answer segment
                     yield content
+
+                if LLM_NAME == 'ZhipuAI':
+                    if chunk.usage:
+                        logger.warning(f"[Track token consumption of streaming] for query: '{query}', usage={chunk.usage}")
             # After the streaming response is complete, save to Cache and SQLite
             answer = ''.join(answer_chunks)
             timecost = time.time() - beg_time
