@@ -10,29 +10,30 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 
 # Contents
 
--   [Features](#features)
--   [Online Retrieval Architecture](#online-retrieval-architecture)
--   [Deploy the RAG-GPT Service](#deploy-the-rag-gpt-service)
-    -   [1. Download repository code](#1.-download-repository-code)
-    -   [2. Configure variables of .env](#2.-configure-variables-of-.env)
-        -   [2.1 Using OpenAI as the LLM base](#2.1-using-OpenAI-as-the-llm-base)
-        -   [2.2 Using ZhipuAI as the LLM base](#2.2-using-ZhipuAI-as-the-llm-base)
-    -   [3. Deploy RAG-GPT using Docker](#3.-deploy-rag-gpt-using-docker)
-    -   [4. Deploy RAG-GPT from source code](#4.-deploy-rag-gpt-from-source-code)
-        -   [4.1 Set up the Python running environment](#4.1-set-up-the-python-running-environment)
-            -    [Create and activate a virtual environment](#create-and-activate-a-virtual-environment)
-            -    [Install dependencies with pip](#install-dependencies-with-pip)
-        -   [4.2 Create SQLite Database](#4.2-create-sqlite-database)
-        -   [4.3 Start the service](#4.3-start-the-service)
--   [Configure the admin console](#configure-the-admin-console)
-    -    [1. Login to the admin console](#1.-login-to-the-admin-console)
-    -    [2. Import your data](#2.-import-your-data)
-    -    [3. Test the chatbot](#3.-test-the-chatbot)
-    -    [4. Embed on your website](#4.-embed-on-your-website)
-    -    [5. Dashboard of user's historical request](#5.-dashboard-of-user's-historical-request)
--   [The frontend of admin console and chatbot](#the-frontend-of-admin-console-and-chatbot)
-    -    [admin console](#admin-console)
-    -    [chatbot](#chatbot)
+- [Features](#features)
+- [Online Retrieval Architecture](#online-retrieval-architecture)
+- [Deploy the RAG-GPT Service](#deploy-the-rag-gpt-service)
+  - [Step 1: Download repository code](#step-1-download-repository-code)
+  - [Step 2: Configure variables of .env](#step-2-configure-variables-of-env)
+    - [Using OpenAI as the LLM base](#using-openai-as-the-llm-base)
+    - [Using ZhipuAI as the LLM base](#using-zhipuai-as-the-llm-base)
+  - [Step 3: Deploy RAG-GPT](#step-3-deploy-rag-gpt)
+    - [Deploy RAG-GPT using Docker](#deploy-rag-gpt-using-docker)
+    - [Deploy RAG-GPT from source code](deploy-rag-gpt-from-source-code)
+    - [Set up the Python running environment](#set-up-the-python-running-environment)
+      - [Create and activate a virtual environment](#create-and-activate-a-virtual-environment)
+      - [Install dependencies with pip](#install-dependencies-with-pip)
+    - [Create SQLite Database](#create-sqlite-database)
+    - [Start the service](#start-the-service)
+- [Configure the admin console](#configure-the-admin-console)
+  - [Step 1: Login to the admin console](#step-1-login-to-the-admin-console)
+  - [Step 2: Import your data](#step-2-import-your-data)
+  - [Step 3: Test the chatbot](#step-3-test-the-chatbot)
+  - [Step 4: Embed on your website](#step-4-embed-on-your-website)
+  - [Step 5: Dashboard of user's historical request](#step-5-dashboard-of-users-historical-request)
+- [The frontend of admin console and chatbot](#the-frontend-of-admin-console-and-chatbot)
+  - [admin console](#admin-console)
+  - [chatbot](#chatbot)
 
 
 ## Features
@@ -52,7 +53,7 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 
 ## Deploy the RAG-GPT Service
 
-### 1. Download repository code
+### Step 1: Download repository code
 
 Clone the repository:
 
@@ -60,11 +61,11 @@ Clone the repository:
 git clone https://github.com/open-kf/rag-gpt.git && cd rag-gpt
 ```
 
-### 2. Configure variables of .env
+### Step 2: Configure variables of .env
 
 Before starting the RAG-GPT service, you need to modify the related configurations for the program to initialize correctly. 
 
-#### 2.1 Using OpenAI as the LLM base
+#### Using OpenAI as the LLM base
 
 ```shell
 cp env_of_openai .env
@@ -91,7 +92,7 @@ USE_DEBUG=0
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
-#### 2.2 Using ZhipuAI as the LLM base
+#### Using ZhipuAI as the LLM base
 
 If you cannot use OpenAI's API services, consider using ZhipuAI as an alternative.
 
@@ -121,19 +122,20 @@ USE_DEBUG=0
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 
-### 3. Deploy RAG-GPT using Docker
+### Step 3: Deploy RAG-GPT
+#### Deploy RAG-GPT using Docker
 
 ```shell
 docker-compose up --build
 ```
 
-### 4. Deploy RAG-GPT from source code
+#### Deploy RAG-GPT from source code
 
-####  4.1 Set up the Python running environment
+##### Set up the Python running environment
 
 It is recommended to install Python-related dependencies in a Python virtual environment to avoid affecting dependencies of other projects.
 
-##### Create and activate a virtual environment
+###### Create and activate a virtual environment
 
 If you have not yet created a virtual environment, you can create one with the following command:
 
@@ -147,7 +149,7 @@ After creation, activate the virtual environment:
 source myenv/bin/activate
 ```
 
-##### Install dependencies with pip
+###### Install dependencies with pip
 
 Once the virtual environment is activated, you can use `pip` to install the required dependencies. 
 
@@ -155,7 +157,7 @@ Once the virtual environment is activated, you can use `pip` to install the requ
 pip install -r requirements.txt
 ```
 
-#### 4.2 Create SQLite Database
+##### Create SQLite Database
 
 The RAG-GPT service uses SQLite as its storage DB. Before starting the RAG-GPT service, you need to execute the following command to initialize the database and add the default configuration for admin console.
 
@@ -163,7 +165,7 @@ The RAG-GPT service uses SQLite as its storage DB. Before starting the RAG-GPT s
 python3 create_sqlite_db.py
 ```
 
-#### 4.3 Start the service
+##### Start the service
 
 If you have completed the steps above, you can try to start the RAG-GPT service by executing the following command.
 
@@ -187,7 +189,7 @@ sh start.sh
 
 ## Configure the admin console
 
-### 1. Login to the admin console
+### Step 1: Login to the admin console
 
 Access the admin console through the link **`http://your-server-ip:7000/open-kf-admin/`** to reach the login page. The default username and password are **`admin`** and **`open_kf_AIGC@2024`** (can be checked in `create_sqlite_db.py`).
 
@@ -210,7 +212,7 @@ On the page **`http://your-server-ip:7000/open-kf-admin/#/`**, you can set the f
 - Display name
 - Chat icon (upload a picture)
 
-### 2. Import your data
+### Step 2: Import your data
 
 After submitting the website URL, once the server retrieves the list of all web page URLs via crawling, you can select the web page URLs you need as the knowledge base (all selected by default). The initial `Status` is **`Recorded`**.
 
@@ -236,7 +238,7 @@ Clicking on a sub-page allows you to view its full text content. This will be ve
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-11.jpg">
 </div>
 
-### 3. Test the chatbot
+### Step 3: Test the chatbot
 
 After importing website data in the admin console, you can experience the chatbot service through the link **`http://your-server-ip:7000/open-kf-chatbot/`**.
 
@@ -244,7 +246,7 @@ After importing website data in the admin console, you can experience the chatbo
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-6.jpg">
 </div>
 
-### 4. Embed on your website
+### Step 4: Embed on your website
 
 Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/embed`**, you can see the detailed tutorial for configuring the iframe in your website.
 
@@ -259,7 +261,7 @@ Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/emb
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-8.jpg">
 </div>
 
-### 5. Dashboard of user's historical request
+### Step 5: Dashboard of user's historical request
 
 Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/dashboard`**, you can view the historical request records of all users within a specified time range.
 
