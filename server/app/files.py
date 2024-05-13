@@ -181,7 +181,8 @@ def submit_local_file_list():
                 'content': file_content,
                 'file_md5': file_md5,
                 'file_path': file_path,
-                'file_url': file_url
+                'file_url': file_url,
+                'file_size': file_size
             })
 
         conn = get_db_connection()
@@ -203,7 +204,7 @@ def submit_local_file_list():
                 data['filename'],
                 data['file_path'],
                 data['file_extension'],
-                0,
+                data['file_size'],
                 data['file_md5'],
                 1,
                 timestamp,
@@ -360,7 +361,7 @@ def get_local_file_sub_content_list():
         cur.execute('''
             SELECT chunk_index as "index", content, content_length
             FROM t_local_file_chunk_tab
-            WHERE id = ?
+            WHERE file_id = ?
             ORDER BY chunk_index
             LIMIT ? OFFSET ?''', (file_id, page_size, start))
 
