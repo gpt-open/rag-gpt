@@ -358,11 +358,12 @@ def get_local_file_sub_content_list():
 
         # Retrieve the specified page of records
         cur.execute('''
-            SELECT chunk_index as index, content, content_length
+            SELECT chunk_index as "index", content, content_length
             FROM t_local_file_chunk_tab
             WHERE id = ?
-            ORDER BY index
+            ORDER BY chunk_index
             LIMIT ? OFFSET ?''', (file_id, page_size, start))
+
         rows = cur.fetchall()
         record_list = [dict(row) for row in rows]  # Convert rows to dictionaries
 
