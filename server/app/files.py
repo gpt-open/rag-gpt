@@ -134,6 +134,7 @@ def submit_local_file_list():
     
     file_list = request.files.getlist('file_list')
     if len(file_list) > MAX_LOCAL_FILE_BATCH_LENGTH:
+        logger.error(f'Too many files uploaded, the maximum is {MAX_LOCAL_FILE_BATCH_LENGTH}!')
         return {'retcode': -20001, 'message': f'Too many files uploaded, the maximum is {MAX_LOCAL_FILE_BATCH_LENGTH}!'}
     
     file_data = []
@@ -146,19 +147,23 @@ def submit_local_file_list():
             file_size = file_.tell()
             file_.seek(0)
             if file_size > MAX_FILE_SIZE:
+                logger.error(f"Unsupported file extension '{file_extension}' for {file_.filename}")
                 return {'retcode': -20002, 'message': f'File {file_.filename} exceeds the size limit of {MAX_FILE_SIZE} bytes!'}
 
             if file_size == 0:
+                logger.error(f'File {file_.filename} is empty!')
                 return {'retcode': -20002, 'message': f'File {file_.filename} is empty!'}
             
             _, file_extension = os.path.splitext(file_.filename)
             if file_extension.lower() not in FILE_LOADER_EXTENSIONS:
-                return {'retcode': -20003, 'message': f'Unsupported file extension {file_extension} for {file_.filename}'}
+                logger.error(f"Unsupported file extension '{file_extension}' for {file_.filename}")
+                return {'retcode': -20003, 'message': f"Unsupported file extension '{file_extension}' for {file_.filename}"}
             
             file_content = file_.read()
             file_md5 = generate_md5(file_content)
             
             if file_md5 in md5_set:
+                logger.error(f'Local duplicate file detected: {file_.filename}')
                 return {'retcode': -20004, 'message': f'Local duplicate file detected: {file_.filename}'}
             md5_set.add(file_md5)
             
@@ -187,6 +192,7 @@ def submit_local_file_list():
         
         duplicate_files = [data['filename'] for data in file_data if data['file_md5'] in existing_md5]
         if duplicate_files:
+            logger.error(f'Duplicate files found: {", ".join(duplicate_files)}')
             return {'retcode': -20005, 'message': f'Duplicate files found: {", ".join(duplicate_files)}'}
         
         insert_data = []

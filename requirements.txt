@@ -27,3 +27,4 @@ aiofiles==23.2.1
 tokenizers==0.15.2
 onnxruntime==1.16.3
 numpy==1.26.4
+openpyxl==3.1.2

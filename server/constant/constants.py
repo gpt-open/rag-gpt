@@ -90,7 +90,7 @@ FILE_LOADER_EXTENSIONS = {
 ".txt",
 ".md",
 ".pdf",
-".epub"
+".epub",
 ".mobi",
 ".html",
 ".docx",
