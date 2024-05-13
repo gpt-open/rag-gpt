@@ -127,8 +127,9 @@ def filter_documents(results: List[Tuple[Document, float]], min_relevance_score:
     for doc, score in results:
         if score >= min_relevance_score:
             filter_results.append((doc, score))
-            domain = urlparse(doc.metadata['source']).netloc
-            domain_set.add(domain)
+            if USE_PREPROCESS_QUERY:
+                domain = urlparse(doc.metadata['source']).netloc
+                domain_set.add(domain)
     return filter_results, domain_set
 
 
@@ -138,8 +139,9 @@ def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_
     for doc in rerank_results:
         if doc['chroma_score'] >= min_relevance_score:
             filter_rerank_results.append(doc)
-            domain = urlparse(doc['metadata']['source']).netloc
-            domain_set.add(domain)
+            if USE_PREPROCESS_QUERY:
+                domain = urlparse(doc['metadata']['source']).netloc
+                domain_set.add(domain)
     return filter_rerank_results, domain_set
     
 
@@ -354,9 +356,10 @@ def smart_query():
         answer_json["source"] = list(dict.fromkeys(answer_json["source"]))
         logger.success(f"For smart_query, query: '{query}' and user_id: '{user_id}', is processed successfully, the answer is:\n{answer}\nthe total timecost is {timecost}\n")
 
-        #is_adjusted = postprocess_llm_response(query, answer_json, BOT_TOPIC, recall_domain_set)
-        #if is_adjusted:
-        #    answer = json.dumps(answer_json)
+        if USE_PREPROCESS_QUERY:
+            is_adjusted = postprocess_llm_response(query, answer_json, BOT_TOPIC, recall_domain_set)
+            if is_adjusted:
+                answer = json.dumps(answer_json)
 
         # Start another new thread to execute saving history records asynchronously
         Thread(target=save_user_query_history, args=(user_id, query, answer, False)).start()
