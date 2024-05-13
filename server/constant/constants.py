@@ -71,7 +71,7 @@ ADD_ISOLATED_URL_CONTENT = 1
 DELETE_ISOLATED_URL_CONTENT = 2
 
 # Maximum number of isolated URLs that can be processed in a batch
-MAX_ISOLATED_URL_BATCH_LENGTH = 20
+MAX_ISOLATED_URL_BATCH_LENGTH = 10
 
 # Directory where downloaded local files are stored
 LOCAL_FILE_DOWNLOAD_DIR = "download_dir"

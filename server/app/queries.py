@@ -215,14 +215,12 @@ Please ensure:
         answer_format_prompt = """**Expected Response Format:**
 The response should be a JSON object, with 'answer' and 'source' fields.
 - "answer": "A detailed and specific answer, crafted in the query's language and fully formatted using **Markdown** syntax. **Don't repeat the `query`**",
-- "source": ["List only unique URLs from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]
-"""
+- "source": ["List only unique URLs from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
     else:
         answer_format_prompt = """**Expected Response Format:**
 The response should be fully formatted using **Mardown** syntax.
-- A detailed and specific answer, crafted in the query's language. Don't start with 'Answer:' or 'answer:', just output the content.
-- Sources: ["List only unique URLs from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]
-"""
+- A detailed and specific answer, crafted in the query's language. Don't start with 'Answer:' or 'answer:', just output the content. Don't repeat the `query`.
+- Sources: ["List only unique URLs from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
 
     prompt = f"""
 This smart customer service bot is designed to provide users with targeted information related to `{bot_topic}`.
@@ -245,16 +243,16 @@ User ID: "{user_id}"
 - Craft responses in the same language as the query to enhance user understanding.
 
 {answer_format_prompt}
-"""
 
-#Please format `answer` as follows:
-#The `answer` must be fully formatted using Markdown syntax to ensure proper rendering in the browser or APP. This includes:
-#- The `answer` must not be identical to the `query`.
-#- **Bold** (`**bold**`) and *italic* (`*italic*`) text for emphasis.
-#- Unordered lists (`- item`) for itemization and ordered lists (`1. item`) for sequencing.
-#- `Inline code` (`` `Inline code` ``) for brief code snippets and (` ``` `) for longer examples, specifying the programming language for syntax highlighting when possible.
-#- [Hyperlinks](URL) (`[Hyperlinks](URL)`) to reference external sources.
-#- Headings (`# Heading 1`, `## Heading 2`, ...) to structure the answer effectively.
+Please format `answer` as follows:
+The `answer` must be fully formatted using Markdown syntax to ensure proper rendering in the browser or APP. This includes:
+- The `answer` must not be identical to the `query`.
+- **Bold** (`**bold**`) and *italic* (`*italic*`) text for emphasis.
+- Unordered lists (`- item`) for itemization and ordered lists (`1. item`) for sequencing.
+- `Inline code` (`` `Inline code` ``) for brief code snippets and (` ``` `) for longer examples, specifying the programming language for syntax highlighting when possible.
+- [Hyperlinks](URL) (`[Hyperlinks](URL)`) to reference external sources.
+- Headings (`# Heading 1`, `## Heading 2`, ...) to structure the answer effectively.
+"""
 
     if USE_DEBUG:
         logger.info(f"Prompt is:\n{prompt}")
