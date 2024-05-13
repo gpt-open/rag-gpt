@@ -3,29 +3,35 @@ import json
 import os
 import sqlite3
 import time
-from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
-from utils.diskcache_config import DiskcacheClient
+from server.app.utils.diskcache_client import diskcache_client
+from server.constant.constants import SQLITE_DB_DIR, SQLITE_DB_NAME
+from dotenv import load_dotenv
 
 
-# Load environment variables from .env file
-load_dotenv()
+os.makedirs(SQLITE_DB_DIR, exist_ok=True)
 
-DISKCACHE_DIR = os.getenv('DISKCACHE_DIR', 'your_diskcache_directory')
-SQLITE_DB_DIR = os.getenv('SQLITE_DB_DIR', 'your_sqlite_db_directory')
-SQLITE_DB_NAME = os.getenv('SQLITE_DB_NAME', 'your_sqlite_db_name')
 
-if not os.path.exists(SQLITE_DB_DIR):
-    os.makedirs(SQLITE_DB_DIR)
+def init_chroma_db():
+    # Load environment variables from .env file
+    load_dotenv(override=True)
+    try:
+        from server.constant.env_constants import check_env_variables
+        check_env_variables()
+        from server.rag.index.embedder.document_embedder import document_embedder
+        return True
+    except Exception as e:
+        print(f"[ERROR] init_chroma_db is failed, the exception is {e}")
+        return False
 
 
 def create_table():
     conn = sqlite3.connect(f'{SQLITE_DB_DIR}/{SQLITE_DB_NAME}')
     cur = conn.cursor()
 
-    # Create domain table to store domain information and status
+    # Create table to store domain information and status of sitemap
     cur.execute('''
-    CREATE TABLE IF NOT EXISTS t_domain_tab (
+    CREATE TABLE IF NOT EXISTS t_sitemap_domain_tab (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         domain TEXT NOT NULL,
         domain_status INTEGER NOT NULL,
@@ -40,14 +46,16 @@ def create_table():
     #  3 - 'Domain processing'
     #  4 - 'Domain processed'
 
-    # Create raw table to store raw webpage information
+
+    # Create table to store sitemap webpage information
     cur.execute('''
-    CREATE TABLE IF NOT EXISTS t_raw_tab (
+    CREATE TABLE IF NOT EXISTS t_sitemap_url_tab (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         domain TEXT NOT NULL,
         url TEXT NOT NULL,
         content TEXT NOT NULL,
         content_length INTEGER NOT NULL,
+        content_md5 TEXT NOT NULL,
         doc_status INTEGER NOT NULL,
         version INTEGER NOT NULL,
         ctime INTEGER NOT NULL,
@@ -55,22 +63,87 @@ def create_table():
     )
     ''')
     #`doc_status` meanings:
-    #  1 - 'Web page recorded'
-    #  2 - 'Web page crawling'
-    #  3 - 'Web page crawling completed'
-    #  4 - 'Web text Embedding stored in Chroma'
-    #  5 - 'Web page expired and needed crawled again'
+    #  0 - 'Process failed'
+    #  1 - 'Sitemaps web page recorded'
+    #  2 - 'Sitemaps web page crawling'
+    #  3 - 'Sitemaps web page crawling completed'
+    #  4 - 'Sitemaps web text Embedding stored in VectorDB'
+    #  5 - 'Sitemaps web page expired and needed crawled again'
+
+
+    # Create table to store isolated webpage information
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS t_isolated_url_tab (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        content TEXT NOT NULL,
+        content_length INTEGER NOT NULL,
+        content_md5 TEXT NOT NULL,
+        doc_status INTEGER NOT NULL,
+        ctime INTEGER NOT NULL,
+        mtime INTEGER NOT NULL
+    )
+    ''')
+    #`doc_status` meanings:
+    #  0 - 'Process failed'
+    #  1 - 'Isolated web page recorded'
+    #  2 - 'Isolated web page crawling'
+    #  3 - 'Isolated web page crawling completed'
+    #  4 - 'Isolated web text Embedding stored in VectorDB'
+
+
+    # Create table to store local file
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS t_local_file_tab (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        origin_file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        content_length INTEGER NOT NULL,
+        content_md5 TEXT NOT NULL,
+        doc_status INTEGER NOT NULL,
+        ctime INTEGER NOT NULL,
+        mtime INTEGER NOT NULL
+    )
+    ''')
+    #`doc_status` meanings:
+    #  0 - 'Process failed'
+    #  1 - 'Local files recorded'
+    #  2 - 'Local files parsing'
+    #  3 - 'Local files parsing completed'
+    #  4 - 'Local files text Embedding stored in VectorDB'
+
+
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS t_local_file_chunk_tab (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_id INTEGER NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        content_length INTEGER NOT NULL,
+        ctime INTEGER NOT NULL,
+        mtime INTEGER NOT NULL
+    )
+    ''')
+
 
     # Create document embedding map table to link documents to their embeddings
     cur.execute('''
     CREATE TABLE IF NOT EXISTS t_doc_embedding_map_tab (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         doc_id INTEGER NOT NULL,
+        doc_source INTEGER NOT NULL,
         embedding_id_list TEXT NOT NULL,
         ctime INTEGER NOT NULL,
         mtime INTEGER NOT NULL
     )
     ''')
+    #`doc_source` meanings:
+    #  1 - 'from sitemap URLs'
+    #  2 - 'from isolated URLs'
+    #  3 - 'from local files'
+
 
     # Create user QA record table to store user queries and responses
     cur.execute('''
@@ -85,6 +158,7 @@ def create_table():
     )
     ''')
 
+
     # Create user QA intervene table for manual intervention in QA pairs
     cur.execute('''
     CREATE TABLE IF NOT EXISTS t_user_qa_intervene_tab (
@@ -97,6 +171,7 @@ def create_table():
     )
     ''')
 
+
     # Create account table to store user account information
     cur.execute('''
     CREATE TABLE IF NOT EXISTS t_account_tab (
@@ -108,6 +183,7 @@ def create_table():
         mtime INTEGER NOT NULL
     )
     ''')
+
 
     # Create bot setting table to store chatbot settings
     cur.execute('''
@@ -124,21 +200,34 @@ def create_table():
         mtime INTEGER NOT NULL
     )
     ''')
+
     conn.commit()
     conn.close()
 
 
 def create_index():
     with sqlite3.connect(f'{SQLITE_DB_DIR}/{SQLITE_DB_NAME}') as conn:
-        # the index of t_domain_tab
-        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_domain ON t_domain_tab (domain)')
+        # the index of t_sitemap_domain_tab
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_domain ON t_sitemap_domain_tab (domain)')
 
-        # the index of t_raw_tab
-        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_url ON t_raw_tab (url)')
-        conn.execute('CREATE INDEX IF NOT EXISTS idx_ctime ON t_raw_tab (ctime)')
+        # the index of t_sitemap_url_tab
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_url ON t_sitemap_url_tab (url)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_ctime ON t_sitemap_url_tab (ctime)')
+
+        # the index of t_isolated_url_tab
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_url ON t_isolated_url_tab (url)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_ctime ON t_isolated_url_tab (ctime)')
+
+        # the index of t_local_file_tab
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_url ON t_local_file_tab (url)')
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_content_md5 ON t_local_file_tab (content_md5)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_ctime ON t_local_file_tab (ctime)')
+
+        # the index of t_local_file_chunk_tab
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_file_id_chunk_index ON t_local_file_chunk_tab (file_id, chunk_index)')
 
         # the index of t_doc_embedding_map_tab
-        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_doc_id ON t_doc_embedding_map_tab (doc_id)')
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_doc_id_doc_source ON t_doc_embedding_map_tab (doc_id, doc_source)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_ctime ON t_doc_embedding_map_tab (ctime)')
 
         # the index of t_user_qa_record_tab
@@ -229,7 +318,6 @@ def init_bot_setting():
                     'ctime': timestamp,
                     'mtime': timestamp
                 }
-                diskcache_client = DiskcacheClient(DISKCACHE_DIR)
                 diskcache_client.set(key, json.dumps(bot_setting))
             except Exception as e:
                 print(f"[ERROR] add bot setting into Cache is failed, the exception is {e}")
@@ -249,6 +337,12 @@ if __name__ == '__main__':
     init_admin_account()
     print('Initialize the bot settings')
     init_bot_setting()
+    print('SQLite init Done!\n\n')
 
-    print('Done!')
 
+    print("Init Chroma DB")
+    ret = init_chroma_db()
+    if ret:
+        print("Init Chroma DB Done!")
+    else:
+        print("Init Chroma DB Failed!")
