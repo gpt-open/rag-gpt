@@ -40,7 +40,7 @@ RERANK_RECALL_TOP_K = 10
 # Defines the model used for re-ranking.
 # 'ms-marco-TinyBERT-L-2-v2': Nano (~4MB), blazing fast model & competitive performance (ranking precision).
 # 'ms-marco-MiniLM-L-12-v2': Small (~34MB), slightly slower & best performance (ranking precision).
-RERANK_MODEL_NAME = "ms-marco-TinyBERT-L-2-v2"
+RERANK_MODEL_NAME = "ms-marco-MiniLM-L-12-v2"
 
 # Maximum number of historical user sessions to retain
 MAX_HISTORY_SESSION_LENGTH = 3

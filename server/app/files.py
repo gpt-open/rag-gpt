@@ -147,7 +147,7 @@ def submit_local_file_list():
             file_size = file_.tell()
             file_.seek(0)
             if file_size > MAX_FILE_SIZE:
-                logger.error(f"Unsupported file extension '{file_extension}' for {file_.filename}")
+                logger.error(f'File {file_.filename} exceeds the size limit of {MAX_FILE_SIZE} bytes!')
                 return {'retcode': -20002, 'message': f'File {file_.filename} exceeds the size limit of {MAX_FILE_SIZE} bytes!'}
 
             if file_size == 0:
