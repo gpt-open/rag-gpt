@@ -19,18 +19,18 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
     - [Using ZhipuAI as the LLM base](#using-zhipuai-as-the-llm-base)
   - [Step 3: Deploy RAG-GPT](#step-3-deploy-rag-gpt)
     - [Deploy RAG-GPT using Docker](#deploy-rag-gpt-using-docker)
-    - [Deploy RAG-GPT from source code](deploy-rag-gpt-from-source-code)
+    - [Deploy RAG-GPT from source code](#deploy-rag-gpt-from-source-code)
     - [Set up the Python running environment](#set-up-the-python-running-environment)
       - [Create and activate a virtual environment](#create-and-activate-a-virtual-environment)
       - [Install dependencies with pip](#install-dependencies-with-pip)
     - [Create SQLite Database](#create-sqlite-database)
     - [Start the service](#start-the-service)
 - [Configure the admin console](#configure-the-admin-console)
-  - [Step 1: Login to the admin console](#step-1-login-to-the-admin-console)
-  - [Step 2: Import your data](#step-2-import-your-data)
-  - [Step 3: Test the chatbot](#step-3-test-the-chatbot)
-  - [Step 4: Embed on your website](#step-4-embed-on-your-website)
-  - [Step 5: Dashboard of user's historical request](#step-5-dashboard-of-users-historical-request)
+  - [Login to the admin console](#login-to-the-admin-console)
+  - [Import your data](#import-your-data)
+  - [Test the chatbot](#test-the-chatbot)
+  - [Embed on your website](#embed-on-your-website)
+  - [Dashboard of user's historical request](#dashboard-of-users-historical-request)
 - [The frontend of admin console and chatbot](#the-frontend-of-admin-console-and-chatbot)
   - [admin console](#admin-console)
   - [chatbot](#chatbot)
@@ -189,7 +189,7 @@ sh start.sh
 
 ## Configure the admin console
 
-### Step 1: Login to the admin console
+### Login to the admin console
 
 Access the admin console through the link **`http://your-server-ip:7000/open-kf-admin/`** to reach the login page. The default username and password are **`admin`** and **`open_kf_AIGC@2024`** (can be checked in `create_sqlite_db.py`).
 
@@ -212,7 +212,7 @@ On the page **`http://your-server-ip:7000/open-kf-admin/#/`**, you can set the f
 - Display name
 - Chat icon (upload a picture)
 
-### Step 2: Import your data
+### Import your data
 
 After submitting the website URL, once the server retrieves the list of all web page URLs via crawling, you can select the web page URLs you need as the knowledge base (all selected by default). The initial `Status` is **`Recorded`**.
 
@@ -238,7 +238,7 @@ Clicking on a sub-page allows you to view its full text content. This will be ve
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-11.jpg">
 </div>
 
-### Step 3: Test the chatbot
+### Test the chatbot
 
 After importing website data in the admin console, you can experience the chatbot service through the link **`http://your-server-ip:7000/open-kf-chatbot/`**.
 
@@ -246,7 +246,7 @@ After importing website data in the admin console, you can experience the chatbo
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-6.jpg">
 </div>
 
-### Step 4: Embed on your website
+### Embed on your website
 
 Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/embed`**, you can see the detailed tutorial for configuring the iframe in your website.
 
@@ -261,7 +261,7 @@ Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/emb
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-8.jpg">
 </div>
 
-### Step 5: Dashboard of user's historical request
+### Dashboard of user's historical request
 
 Through the admin console link **`http://your-server-ip:7000/open-kf-admin/#/dashboard`**, you can view the historical request records of all users within a specified time range.
 
