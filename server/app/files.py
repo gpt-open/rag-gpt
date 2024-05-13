@@ -351,7 +351,7 @@ def get_local_file_sub_content_list():
         cur = conn.cursor()
 
         # Calculate total count
-        cur.execute('SELECT COUNT(*) FROM t_local_file_chunk_tab WHERE id = ?', (file_id,))
+        cur.execute('SELECT COUNT(*) FROM t_local_file_chunk_tab WHERE file_id = ?', (file_id,))
         total_count = cur.fetchone()[0]
 
         # Calculate the starting point for the query
