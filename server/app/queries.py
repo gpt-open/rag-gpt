@@ -170,14 +170,14 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
         filter_rerank_results, recall_domain_set = filter_rerank_documents(rerank_results, MIN_RELEVANCE_SCORE)
         if filter_rerank_results:
             filter_context = "\n--------------------\n".join([
-                f"URL: {doc['metadata']['source']}\nDocument: {doc['text']}"
+                f"`Citation URL`: {doc['metadata']['source']}\nDocument: {doc['text']}"
                 for doc in filter_rerank_results[:RECALL_TOP_K]
             ])
     else:
         filter_results, recall_domain_set = filter_documents(results, MIN_RELEVANCE_SCORE)
         if filter_results:
             filter_context = "\n--------------------\n".join([
-                f"URL: {doc.metadata['source']}\nDocument: {doc.page_content}"
+                f"`Citation URL`: {doc.metadata['source']}\nDocument: {doc.page_content}"
                 for doc, score in filter_results
             ])
 
@@ -204,7 +204,7 @@ User Query History (Sorted by request time from most recent to oldest):
         context = f"""No documents found directly related to the current query!
 Please provide the response in the following format and ensure that the 'answer' part is translated into the same language as the user's query:
 
-"Unfortunately, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
+"I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
 
 Please ensure:
 - Maintain the context and meaning of the original message.
@@ -215,12 +215,12 @@ Please ensure:
         answer_format_prompt = """**Expected Response Format:**
 The response should be a JSON object, with 'answer' and 'source' fields.
 - "answer": "A detailed and specific answer, crafted in the query's language and fully formatted using **Markdown** syntax. **Don't repeat the `query`**",
-- "source": ["List only unique URLs from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
+- "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
     else:
         answer_format_prompt = """**Expected Response Format:**
 The response should be fully formatted using **Mardown** syntax.
 - A detailed and specific answer, crafted in the query's language. Don't start with 'Answer:' or 'answer:', just output the content. Don't repeat the `query`.
-- Sources: ["List only unique URLs from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
+- Sources: ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
 
     prompt = f"""
 This smart customer service bot is designed to provide users with targeted information related to `{bot_topic}`.
@@ -309,7 +309,7 @@ def postprocess_llm_response(query: str, answer_json: Dict[str, Any], bot_topic:
 
     if not adjust_source:
         if bot_topic not in answer_json['answer']:
-            adjust_answer = f"Unfortunately, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
+            adjust_answer = f"I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
             logger.warning(f"adjust_answer:'{adjust_answer}'")
             if not is_adjusted:
                 is_adjusted = True

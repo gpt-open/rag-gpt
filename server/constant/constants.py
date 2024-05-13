@@ -34,8 +34,13 @@ MAX_QUERY_LENGTH = 200
 # Number of top documents to recall for initial retrieval in search operations
 RECALL_TOP_K = 5
 
-# Number of top documents to recall when using rerank
+# Number of top documents to recall when using re-ranking
 RERANK_RECALL_TOP_K = 10
+
+# Defines the model used for re-ranking.
+# 'ms-marco-TinyBERT-L-2-v2': Nano (~4MB), blazing fast model & competitive performance (ranking precision).
+# 'ms-marco-MiniLM-L-12-v2': Small (~34MB), slightly slower & best performance (ranking precision).
+RERANK_MODEL_NAME = "ms-marco-TinyBERT-L-2-v2"
 
 # Maximum number of historical user sessions to retain
 MAX_HISTORY_SESSION_LENGTH = 3

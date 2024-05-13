@@ -10,12 +10,13 @@ from typing import Optional, List, Dict, Any
 import numpy as np
 import onnxruntime as ort
 from tokenizers import AddedToken, Tokenizer
+from server.constant.constants import RERANK_MODEL_NAME
 from server.logger.logger_config import my_logger as logger
 
 
 default_cache_dir = "server/rag/post_retrieval/rerank/tmp_cache"
 #default_model = "ms-marco-TinyBERT-L-2-v2"
-default_model = "ms-marco-MiniLM-L-12-v2"
+default_model = RERANK_MODEL_NAME
 model_file_map = {
     "ms-marco-TinyBERT-L-2-v2": "flashrank-TinyBERT-L-2-v2.onnx",
     "ms-marco-MiniLM-L-12-v2": "flashrank-MiniLM-L-12-v2_Q.onnx"
@@ -66,11 +67,11 @@ class Ranker:
             model_name (str): The name of the model to be prepared.
         """
         if not self.cache_dir.exists():
-            logger.error(f"Cache directory {self.cache_dir} not found!")
+            logger.error(f"Cache directory '{self.cache_dir}' not found!")
             sys.exit(-1)
 
         if not self.model_dir.exists():
-            logger.error(f"Downloading {model_name}...")
+            logger.error(f"Model directory '{self.model_dir}' not found!")
             sys.exit(-1)
 
     def _get_tokenizer(self, max_length: int = 512) -> Tokenizer:
