@@ -8,6 +8,33 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 </div>
 
 
+# Contents
+
+-   [Features](#features)
+-   [Online Retrieval Architecture](#online-retrieval-architecture)
+-   [Deploy the RAG-GPT Service](#deploy-the-rag-gpt-service)
+    -   [1. Download repository code](#1.-download-repository-code)
+    -   [2. Configure variables of .env](#2.-configure-variables-of-.env)
+        -   [2.1 Using OpenAI as the LLM base](#2.1-using-OpenAI-as-the-llm-base)
+        -   [2.2 Using ZhipuAI as the LLM base](#2.2-using-ZhipuAI-as-the-llm-base)
+    -   [3. Deploy RAG-GPT using Docker](#3.-deploy-rag-gpt-using-docker)
+    -   [4. Deploy RAG-GPT from source code](#4.-deploy-rag-gpt-from-source-code)
+        -   [4.1 Set up the Python running environment](#4.1-set-up-the-python-running-environment)
+            -    [Create and activate a virtual environment](#create-and-activate-a-virtual-environment)
+            -    [Install dependencies with pip](#install-dependencies-with-pip)
+        -   [4.2 Create SQLite Database](#4.2-create-sqlite-database)
+        -   [4.3 Start the service](#4.3-start-the-service)
+-   [Configure the admin console](#configure-the-admin-console)
+    -    [1. Login to the admin console](#1.-login-to-the-admin-console)
+    -    [2. Import your data](#2.-import-your-data)
+    -    [3. Test the chatbot](#3.-test-the-chatbot)
+    -    [4. Embed on your website](#4.-embed-on-your-website)
+    -    [5. Dashboard of user's historical request](#5.-dashboard-of-user's-historical-request)
+-   [The frontend of admin console and chatbot](#the-frontend-of-admin-console-and-chatbot)
+    -    [admin console](#admin-console)
+    -    [chatbot](#chatbot)
+
+
 ## Features
 - **Built-in LLM Support**: Provides integrated support for large language models.
 - **Quick Setup**: Enables deployment of production-level conversational service robots within just five minutes.
@@ -37,39 +64,62 @@ git clone https://github.com/open-kf/rag-gpt.git && cd rag-gpt
 
 Before starting the RAG-GPT service, you need to modify the related configurations for the program to initialize correctly. 
 
+#### 2.1 Using OpenAI as the LLM base
+
 ```shell
-cp env_template .env
+cp env_of_openai .env
 ```
 
 The variables in .env
 
 ```shell
-DISKCACHE_DIR="diskcache_dir"
-SQLITE_DB_DIR="sqlite_dir"
-SQLITE_DB_NAME="mydatabase.sqlite3"
-MAX_CRAWL_PARALLEL_REQUEST=5
-CHROMA_DB_DIR="chroma_dir"
-CHROMA_COLLECTION_NAME="mychroma_collection"
+LLM_NAME="OpenAI"
 OPENAI_API_KEY="xxxx"
 GPT_MODEL_NAME="gpt-3.5-turbo"
-OPENAI_EMBEDDING_MODEL_NAME="text-embedding-3-small"
-MAX_CHUNK_LENGTH=1300
-MAX_QUERY_LENGTH=200
-RECALL_TOP_K=5
-MIN_RELEVANCE_SCORE=0.5
-MAX_HISTORY_SESSION_LENGTH=3
-SESSION_EXPIRE_TIME=10800
-SITE_TITLE="your site title"
-STATIC_DIR="web"
-URL_PREFIX="http://your-server-ip:7000/"
-MEDIA_DIR="media_dir"
+MIN_RELEVANCE_SCORE=0.3
+BOT_TOPIC="xxxx"
+URL_PREFIX="http://127.0.0.1:7000/"
+USE_PREPROCESS_QUERY=0
+USE_RERANKING=1
+USE_DEBUG=0
 ```
 
+- Don't modify **`LLM_NAME`**
 - Modify the **`OPENAI_API_KEY`** with your own key. Please log in to the [OpenAI website](https://platform.openai.com/api-keys) to view your API Key.
-- Change **`SITE_TITLE`** to reflect your website's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`.
-- Adjust **`URL_PREFIX`** to match your website's domain.
 - Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` if you wish to use GPT-4 Turbo.
-- The relevance score used for document retrieval is a numerical value between 0 and 1, typically used to indicate the degree of match or confidence. The closer the score is to 1, the more relevant or accurate the match. By adjusting **`MIN_RELEVANCE_SCORE`**, documents with lower relevance can be filtered out. Please adjust this parameter appropriately based on request logs.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain.
+- For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
+
+#### 2.2 Using ZhipuAI as the LLM base
+
+If you cannot use OpenAI's API services, consider using ZhipuAI as an alternative.
+
+```shell
+cp env_of_zhipuai .env
+```
+
+The variables in .env
+
+```shell
+LLM_NAME="ZhipuAI"
+ZHIPUAI_API_KEY="xxxx"
+GLM_MODEL_NAME="glm-3-turbo"
+MIN_RELEVANCE_SCORE=0.3
+BOT_TOPIC="xxxx"
+URL_PREFIX="http://127.0.0.1:7000/"
+USE_PREPROCESS_QUERY=0
+USE_RERANKING=1
+USE_DEBUG=0
+```
+
+- Don't modify **`LLM_NAME`**
+- Modify the **`ZHIPUAI_API_KEY`** with your own key. Please log in to the [ZhipuAI website](https://open.bigmodel.cn/usercenter/apikeys) to view your API Key.
+- Update the **`GLM_MODEL_NAME`** setting, replacing `glm-3-turbo` with `glm-4` if you wish to use GLM-4.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain.
+- For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
+
 
 ### 3. Deploy RAG-GPT using Docker
 
