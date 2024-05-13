@@ -6,9 +6,23 @@ import time
 from werkzeug.security import generate_password_hash
 from server.app.utils.diskcache_client import diskcache_client
 from server.constant.constants import SQLITE_DB_DIR, SQLITE_DB_NAME
+from dotenv import load_dotenv
 
 
 os.makedirs(SQLITE_DB_DIR, exist_ok=True)
+
+
+def init_chroma_db():
+    # Load environment variables from .env file
+    load_dotenv(override=True)
+    try:
+        from server.constant.env_constants import check_env_variables
+        check_env_variables()
+        from server.rag.index.embedder.document_embedder import document_embedder
+        return True
+    except Exception as e:
+        print(f"[ERROR] init_chroma_db is failed, the exception is {e}")
+        return False
 
 
 def create_table():
@@ -323,6 +337,12 @@ if __name__ == '__main__':
     init_admin_account()
     print('Initialize the bot settings')
     init_bot_setting()
+    print('SQLite init Done!\n\n')
 
-    print('Done!')
 
+    print("Init Chroma DB")
+    ret = init_chroma_db()
+    if ret:
+        print("Init Chroma DB Done!")
+    else:
+        print("Init Chroma DB Failed!")
