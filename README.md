@@ -89,7 +89,7 @@ USE_DEBUG=0
 - Don't modify **`LLM_NAME`**
 - Modify the **`OPENAI_API_KEY`** with your own key. Please log in to the [OpenAI website](https://platform.openai.com/api-keys) to view your API Key.
 - Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` if you wish to use GPT-4 Turbo.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
@@ -118,7 +118,7 @@ USE_DEBUG=0
 - Don't modify **`LLM_NAME`**
 - Modify the **`ZHIPUAI_API_KEY`** with your own key. Please log in to the [ZhipuAI website](https://open.bigmodel.cn/usercenter/apikeys) to view your API Key.
 - Update the **`GLM_MODEL_NAME`** setting, replacing `glm-3-turbo` with `glm-4` if you wish to use GLM-4.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
@@ -153,7 +153,7 @@ USE_DEBUG=0
 - Don't modify **`LLM_NAME`**
 - Update the **`OLLAMA_MODEL_NAME `** setting, select an appropriate model from [ollama library](https://ollama.com/library).
 - Modify the **`OLLAMA_BASE_URL `** with your actual base_url.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 

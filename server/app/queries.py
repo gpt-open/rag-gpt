@@ -121,28 +121,20 @@ def rerank_documents(query: str, results: List[Tuple[Document, float]]) -> List[
     return rerank_results
 
 
-def filter_documents(results: List[Tuple[Document, float]], min_relevance_score: float) -> Tuple[List[Tuple[Document, float]], set[str]]:
+def filter_documents(results: List[Tuple[Document, float]], min_relevance_score: float) -> List[Tuple[Document, float]]:
     filter_results = []
-    domain_set = set()
     for doc, score in results:
         if score >= min_relevance_score:
             filter_results.append((doc, score))
-            if USE_PREPROCESS_QUERY:
-                domain = urlparse(doc.metadata['source']).netloc
-                domain_set.add(domain)
-    return filter_results, domain_set
+    return filter_results
 
 
-def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_score: float) -> Tuple[List[Dict[str, Any]], set[str]]:
+def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_score: float) -> List[Dict[str, Any]]:
     filter_rerank_results = []
-    domain_set = set()
     for doc in rerank_results:
         if doc['chroma_score'] >= min_relevance_score:
             filter_rerank_results.append(doc)
-            if USE_PREPROCESS_QUERY:
-                domain = urlparse(doc['metadata']['source']).netloc
-                domain_set.add(domain)
-    return filter_rerank_results, domain_set
+    return filter_rerank_results
     
 
 def generate_answer(query: str, user_id: str, is_streaming: bool = False):
@@ -169,14 +161,14 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
     if USE_RERANKING and results:
         # Rerank the documents
         rerank_results = rerank_documents(adjust_query, results)
-        filter_rerank_results, recall_domain_set = filter_rerank_documents(rerank_results, MIN_RELEVANCE_SCORE)
+        filter_rerank_results = filter_rerank_documents(rerank_results, MIN_RELEVANCE_SCORE)
         if filter_rerank_results:
             filter_context = "\n--------------------\n".join([
                 f"`Citation URL`: {doc['metadata']['source']}\nDocument: {doc['text']}"
                 for doc in filter_rerank_results[:RECALL_TOP_K]
             ])
     else:
-        filter_results, recall_domain_set = filter_documents(results, MIN_RELEVANCE_SCORE)
+        filter_results = filter_documents(results, MIN_RELEVANCE_SCORE)
         if filter_results:
             filter_context = "\n--------------------\n".join([
                 f"`Citation URL`: {doc.metadata['source']}\nDocument: {doc.page_content}"
@@ -262,7 +254,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
         logger.info(f"Prompt is:\n{prompt}")
 
     response = llm_generator.generate(prompt, is_streaming)
-    return response, recall_domain_set
+    return response
 
 
 def check_smart_query(f):
@@ -292,33 +284,33 @@ def check_smart_query(f):
     return decorated_function
 
 
-def postprocess_llm_response(query: str, answer_json: Dict[str, Any], bot_topic: str, recall_domain_set: set[str]) -> bool:
-    if answer_json['source']:
-        answer_json['source'] = list(dict.fromkeys(answer_json['source']))
-
-    is_adjusted = False
-    adjust_source = []
-    for url in answer_json['source']:
-        domain = urlparse(url).netloc
-        if domain in recall_domain_set:
-            adjust_source.append(url)
-        else:
-            logger.warning(f"The domain of url: '{url}' is '{domain}', it is not in {recall_domain_set}, it should not be returned!")
-            if not is_adjusted:
-                is_adjusted = True
-
-    if is_adjusted:
-        answer_json['source'] = adjust_source
-        logger.warning(f"adjust_source:{adjust_source}")
-
-    if not adjust_source:
-        if bot_topic not in answer_json['answer']:
-            adjust_answer = f"I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
-            logger.warning(f"adjust_answer:'{adjust_answer}'")
-            if not is_adjusted:
-                is_adjusted = True
-            answer_json['answer'] = adjust_answer
-    return is_adjusted
+#def postprocess_llm_response(query: str, answer_json: Dict[str, Any], bot_topic: str, recall_domain_set: set[str]) -> bool:
+#    if answer_json['source']:
+#        answer_json['source'] = list(dict.fromkeys(answer_json['source']))
+#
+#    is_adjusted = False
+#    adjust_source = []
+#    for url in answer_json['source']:
+#        domain = urlparse(url).netloc
+#        if domain in recall_domain_set:
+#            adjust_source.append(url)
+#        else:
+#            logger.warning(f"The domain of url: '{url}' is '{domain}', it is not in {recall_domain_set}, it should not be returned!")
+#            if not is_adjusted:
+#                is_adjusted = True
+#
+#    if is_adjusted:
+#        answer_json['source'] = adjust_source
+#        logger.warning(f"adjust_source:{adjust_source}")
+#
+#    if not adjust_source:
+#        if bot_topic not in answer_json['answer']:
+#            adjust_answer = f"I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
+#            logger.warning(f"adjust_answer:'{adjust_answer}'")
+#            if not is_adjusted:
+#                is_adjusted = True
+#            answer_json['answer'] = adjust_answer
+#    return is_adjusted
 
 
 @queries_bp.route('/smart_query', methods=['POST'])
@@ -339,7 +331,7 @@ def smart_query():
             query = query[:MAX_QUERY_LENGTH]
 
         beg_time = time.time()
-        response, recall_domain_set = generate_answer(query, user_id, False)
+        response = generate_answer(query, user_id, False)
         logger.warning(f"[Track token consumption] for query: '{query}', usage={response.usage}")
         answer = response.choices[0].message.content
 
@@ -357,11 +349,6 @@ def smart_query():
         answer_json = json.loads(answer)
         answer_json["source"] = list(dict.fromkeys(answer_json["source"]))
         logger.success(f"For smart_query, query: '{query}' and user_id: '{user_id}', is processed successfully, the answer is:\n{answer}\nthe total timecost is {timecost}\n")
-
-        if USE_PREPROCESS_QUERY:
-            is_adjusted = postprocess_llm_response(query, answer_json, BOT_TOPIC, recall_domain_set)
-            if is_adjusted:
-                answer = json.dumps(answer_json)
 
         # Start another new thread to execute saving history records asynchronously
         Thread(target=save_user_query_history, args=(user_id, query, answer, False)).start()
@@ -398,7 +385,7 @@ def smart_query_stream():
         beg_time = time.time()
         def generate_llm():
             answer_chunks = []
-            response, _ = generate_answer(query, user_id, True)
+            response = generate_answer(query, user_id, True)
             for chunk in response:
                 #logger.info(f"chunk is: {chunk}")
                 content = chunk.choices[0].delta.content
