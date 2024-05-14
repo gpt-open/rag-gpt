@@ -29,6 +29,9 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 - [Configure the admin console](#configure-the-admin-console)
   - [Login to the admin console](#login-to-the-admin-console)
   - [Import your data](#import-your-data)
+    - [import websites](#import-websites)
+    - [import isolated urls](#import-isolated-urls)
+    - [import local files](#import-local-files)
   - [Test the chatbot](#test-the-chatbot)
   - [Embed on your website](#embed-on-your-website)
   - [Dashboard of user's historical request](#dashboard-of-users-historical-request)
@@ -38,9 +41,9 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 
 
 ## Features
-- **Built-in LLM Support**: Provides integrated support for large language models.
+- **Built-in LLM Support**: Support cloud-based LLMs and local LLMs.
 - **Quick Setup**: Enables deployment of production-level conversational service robots within just five minutes.
-- **Simple Maintenance**: Only requires Python, with no need for additional middleware.
+- **Diverse Knowledge Base Integration**: Supports multiple types of knowledge bases, including websites, isolated URLs, and local files.
 - **Flexible Configuration**: Offers a user-friendly backend equipped with customizable settings for streamlined management.
 - **Attractive UI**: Features a customizable and visually appealing user interface.
 
@@ -129,7 +132,7 @@ If your knowledge base involves **sensitive information** and you prefer not to 
 
 
 > [!NOTE]
-> First, refer to `https://github.com/ollama/ollama` to **Install Ollama**, and download the embedding model `mxbai-embed-large` and the LLM model such as `llama3`.
+> First, refer to [ollama](https://github.com/ollama/ollama) to **Install Ollama**, and download the embedding model `mxbai-embed-large` and the LLM model such as `llama3`.
 
 
 ```shell
@@ -253,16 +256,18 @@ On the page **`http://your-server-ip:7000/open-kf-admin/#/`**, you can set the f
 
 ### Import your data
 
+#### Import websites
+
 After submitting the website URL, once the server retrieves the list of all web page URLs via crawling, you can select the web page URLs you need as the knowledge base (all selected by default). The initial `Status` is **`Recorded`**.
 
 <div align="center">
-<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-4.jpg">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-12.jpg">
 </div>
 
-You can actively refresh the page **`http://your-server-ip:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of the web page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Stored`**.
+You can actively refresh the page **`http://your-server-ip:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of the web page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Trained`**.
 
 <div align="center">
-<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-5.jpg">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-13.jpg">
 </div>
 
 Clicking on a webpage's URL reveals how many sub-pages the webpage is divided into, and the text size of each sub-page.
@@ -276,6 +281,23 @@ Clicking on a sub-page allows you to view its full text content. This will be ve
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-11.jpg">
 </div>
+
+#### Import isolated urls
+
+Collect the URLs of the required web pages. You can submit up to `10` web page URLs at a time, and these pages can be from different domains.
+
+<div align="center">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-14.jpg">
+</div>
+
+#### Import local files
+
+Upload the required local files. You can upload up to `10` files at a time, and each file cannot exceed `30MB`. The following file types are currently supported: `[".txt", ".md", ".pdf", ".epub", ".mobi", ".html", ".docx", ".pptx", ".xlsx", ".csv"]`.
+
+<div align="center">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-15.jpg">
+</div>
+
 
 ### Test the chatbot
 
