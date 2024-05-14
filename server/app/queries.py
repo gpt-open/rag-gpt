@@ -13,7 +13,7 @@ from server.app.utils.sqlite_client import get_db_connection
 from server.app.utils.diskcache_client import diskcache_client
 from server.app.utils.diskcache_lock import diskcache_lock
 from server.logger.logger_config import my_logger as logger
-from server.rag.generation.cloud_llm import cloud_llm_generator
+from server.rag.generation.llm import llm_generator
 from server.rag.pre_retrieval.query_transformation.rewrite import query_rewrite
 from server.rag.post_retrieval.rerank.flash_ranker import RerankRequest, reranker
 from server.rag.retrieval.vector_search import vector_search
@@ -217,12 +217,14 @@ Please ensure:
         answer_format_prompt = """**Expected Response Format:**
 The response should be a JSON object, with 'answer' and 'source' fields.
 - "answer": "A detailed and specific answer, crafted in the query's language and fully formatted using **Markdown** syntax. **Don't repeat the `query`**",
-- "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
+- "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]
+"""
     else:
         answer_format_prompt = """**Expected Response Format:**
 The response should be fully formatted using **Mardown** syntax.
 - A detailed and specific answer, crafted in the query's language. Don't start with 'Answer:' or 'answer:', just output the content. Don't repeat the `query`.
-- Sources: ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]"""
+- Sources: "List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, return empty"
+"""
 
     prompt = f"""
 This smart customer service bot is designed to provide users with targeted information related to `{bot_topic}`.
@@ -259,7 +261,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
     if USE_DEBUG:
         logger.info(f"Prompt is:\n{prompt}")
 
-    response = cloud_llm_generator.generate(prompt, is_streaming)
+    response = llm_generator.generate(prompt, is_streaming)
     return response, recall_domain_set
 
 
@@ -398,7 +400,7 @@ def smart_query_stream():
             answer_chunks = []
             response, _ = generate_answer(query, user_id, True)
             for chunk in response:
-                logger.info(f"chunk is: {chunk}")
+                #logger.info(f"chunk is: {chunk}")
                 content = chunk.choices[0].delta.content
                 if content:
                     answer_chunks.append(content)

@@ -4,10 +4,11 @@ from server.logger.logger_config import my_logger as logger
 
 
 def check_env_variables():
-    # LLM_NAME: Name of the language model being used, should be 'OpenAI' or 'ZhipuAI'.
+    # LLM_NAME: Name of the language model being used, should be 'OpenAI' or 'ZhipuAI' or 'Ollama'.
     LLM_NAME = os.getenv('LLM_NAME')
-    if LLM_NAME not in ['OpenAI', 'ZhipuAI']:
-        logger.error(f"LLM_NAME: '{LLM_NAME}' is illegal! Must be 'OpenAI' or 'ZhipuAI'.")
+    llm_name_list = ['OpenAI', 'ZhipuAI', 'Ollama']
+    if LLM_NAME not in llm_name_list:
+        logger.error(f"LLM_NAME: '{LLM_NAME}' is illegal! Must be in {llm_name_list}.")
         sys.exit(-1)
 
     if LLM_NAME == 'OpenAI':
@@ -22,7 +23,7 @@ def check_env_variables():
         if GPT_MODEL_NAME not in ['gpt-3.5-turbo', 'gpt-4-turbo']:
             logger.error(f"GPT_MODEL_NAME: '{GPT_MODEL_NAME}' is illegal! Must be 'gpt-3.5-turbo' or 'gpt-4-turbo'")
             sys.exit(-1)
-    else:
+    elif LLM_NAME == 'ZhipuAI':
         # ZHIPUAI_API_KEY: API key for accessing ZhipuAI's services.
         ZHIPUAI_API_KEY = os.getenv('ZHIPUAI_API_KEY')
         if ZHIPUAI_API_KEY == 'xxxx':
@@ -34,16 +35,23 @@ def check_env_variables():
         if GLM_MODEL_NAME not in ['glm-3-turbo', 'glm-4']:
             logger.error(f"GLM_MODEL_NAME: '{GLM_MODEL_NAME}' is illegal! Must be 'glm-3-turbo' or 'glm-4'")
             sys.exit(-1)
+    else:
+        # OLLAMA_MODEL_NAME: Specific Ollma model being used, e.g., 'llama3', 'llama3:70b', 'phi3', 'mistral', etc.
+        #OLLAMA_MODEL_NAME = os.getenv('OLLAMA_MODEL_NAME')
+        OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
+        if not OLLAMA_BASE_URL.startswith('http://') and not OLLAMA_BASE_URL.startswith('https://'):
+            logger.error(f"OLLAMA_BASE_URL: '{OLLAMA_BASE_URL}' is illegal! It must start with 'http://' or 'https://'")
+            sys.exit(-1)
 
-    # MIN_RELEVANCE_SCORE: Minimum score for a document to be considered relevant, and will be used in prompt, between 0.0 and 0.6.
+    # MIN_RELEVANCE_SCORE: Minimum score for a document to be considered relevant, and will be used in prompt, between 0.3 and 0.7.
     MIN_RELEVANCE_SCORE = os.getenv('MIN_RELEVANCE_SCORE')
     try:
         min_relevance_score = float(MIN_RELEVANCE_SCORE)
-        if min_relevance_score < 0.0 or min_relevance_score > 0.6:
-            logger.error(f"MIN_RELEVANCE_SCORE: {MIN_RELEVANCE_SCORE} is illegal! It should be a float number between [0.0~0.6]")
+        if min_relevance_score < 0.3 or min_relevance_score > 0.7:
+            logger.error(f"MIN_RELEVANCE_SCORE: {MIN_RELEVANCE_SCORE} is illegal! It should be a float number between [0.3~0.7]")
             sys.exit(-1)
     except Exception as e:
-        logger.error(f"MIN_RELEVANCE_SCORE: {MIN_RELEVANCE_SCORE} is illegal! It should be a float number between [0.0~0.6]")
+        logger.error(f"MIN_RELEVANCE_SCORE: {MIN_RELEVANCE_SCORE} is illegal! It should be a float number between [0.3~0.7]")
         sys.exit(-1)
 
     # BOT_TOPIC: Main topic or domain the bot is designed to handle, like 'OpenIM' or 'LangChain'.

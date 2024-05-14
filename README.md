@@ -17,6 +17,7 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
   - [Step 2: Configure variables of .env](#step-2-configure-variables-of-env)
     - [Using OpenAI as the LLM base](#using-openai-as-the-llm-base)
     - [Using ZhipuAI as the LLM base](#using-zhipuai-as-the-llm-base)
+    - [Using local LLMs](#using-local-llms)
   - [Step 3: Deploy RAG-GPT](#step-3-deploy-rag-gpt)
     - [Deploy RAG-GPT using Docker](#deploy-rag-gpt-using-docker)
     - [Deploy RAG-GPT from source code](#deploy-rag-gpt-from-source-code)
@@ -122,6 +123,41 @@ USE_DEBUG=0
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 
+#### Using local LLMs
+
+If your knowledge base involves **sensitive information** and you prefer not to use cloud-based LLMs, consider using `Ollama` to deploy large models locally.
+
+
+> [!NOTE]
+> First, refer to `https://github.com/ollama/ollama` to **Install Ollama**, and download the embedding model `mxbai-embed-large` and the LLM model such as `llama3`.
+
+
+```shell
+cp env_of_ollama .env
+```
+
+The variables in .env
+
+```shell
+LLM_NAME="Ollama"
+OLLAMA_MODEL_NAME="llama3"
+OLLAMA_BASE_URL="http://127.0.0.1:11434/v1"
+MIN_RELEVANCE_SCORE=0.3
+BOT_TOPIC="OpenIM"
+URL_PREFIX="http://127.0.0.1:7000/"
+USE_PREPROCESS_QUERY=0
+USE_RERANKING=1
+USE_DEBUG=0
+```
+
+- Don't modify **`LLM_NAME`**
+- Update the **`OLLAMA_MODEL_NAME `** setting, select an appropriate model from [ollama library](https://ollama.com/library).
+- Modify the **`OLLAMA_BASE_URL `** with your actual base_url.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain.
+- For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
+
+
 ### Step 3: Deploy RAG-GPT
 #### Deploy RAG-GPT using Docker
 
@@ -130,6 +166,9 @@ docker-compose up --build
 ```
 
 #### Deploy RAG-GPT from source code
+
+> [!NOTE]
+> Please use Python version 3.10.x or above.
 
 ##### Set up the Python running environment
 
