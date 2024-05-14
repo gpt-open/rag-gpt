@@ -17,6 +17,7 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
   - [Step 2: Configure variables of .env](#step-2-configure-variables-of-env)
     - [Using OpenAI as the LLM base](#using-openai-as-the-llm-base)
     - [Using ZhipuAI as the LLM base](#using-zhipuai-as-the-llm-base)
+    - [Using local LLMs](#using-local-llms)
   - [Step 3: Deploy RAG-GPT](#step-3-deploy-rag-gpt)
     - [Deploy RAG-GPT using Docker](#deploy-rag-gpt-using-docker)
     - [Deploy RAG-GPT from source code](#deploy-rag-gpt-from-source-code)
@@ -28,6 +29,9 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 - [Configure the admin console](#configure-the-admin-console)
   - [Login to the admin console](#login-to-the-admin-console)
   - [Import your data](#import-your-data)
+    - [import websites](#import-websites)
+    - [import isolated urls](#import-isolated-urls)
+    - [import local files](#import-local-files)
   - [Test the chatbot](#test-the-chatbot)
   - [Embed on your website](#embed-on-your-website)
   - [Dashboard of user's historical request](#dashboard-of-users-historical-request)
@@ -37,9 +41,9 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
 
 
 ## Features
-- **Built-in LLM Support**: Provides integrated support for large language models.
+- **Built-in LLM Support**: Support cloud-based LLMs and local LLMs.
 - **Quick Setup**: Enables deployment of production-level conversational service robots within just five minutes.
-- **Simple Maintenance**: Only requires Python, with no need for additional middleware.
+- **Diverse Knowledge Base Integration**: Supports multiple types of knowledge bases, including websites, isolated URLs, and local files.
 - **Flexible Configuration**: Offers a user-friendly backend equipped with customizable settings for streamlined management.
 - **Attractive UI**: Features a customizable and visually appealing user interface.
 
@@ -88,7 +92,7 @@ USE_DEBUG=0
 - Don't modify **`LLM_NAME`**
 - Modify the **`OPENAI_API_KEY`** with your own key. Please log in to the [OpenAI website](https://platform.openai.com/api-keys) to view your API Key.
 - Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` if you wish to use GPT-4 Turbo.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
@@ -117,7 +121,42 @@ USE_DEBUG=0
 - Don't modify **`LLM_NAME`**
 - Modify the **`ZHIPUAI_API_KEY`** with your own key. Please log in to the [ZhipuAI website](https://open.bigmodel.cn/usercenter/apikeys) to view your API Key.
 - Update the **`GLM_MODEL_NAME`** setting, replacing `glm-3-turbo` with `glm-4` if you wish to use GLM-4.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting` and `result rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain.
+- For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
+
+
+#### Using local LLMs
+
+If your knowledge base involves **sensitive information** and you prefer not to use cloud-based LLMs, consider using `Ollama` to deploy large models locally.
+
+
+> [!NOTE]
+> First, refer to [ollama](https://github.com/ollama/ollama) to **Install Ollama**, and download the embedding model `mxbai-embed-large` and the LLM model such as `llama3`.
+
+
+```shell
+cp env_of_ollama .env
+```
+
+The variables in .env
+
+```shell
+LLM_NAME="Ollama"
+OLLAMA_MODEL_NAME="llama3"
+OLLAMA_BASE_URL="http://127.0.0.1:11434/v1"
+MIN_RELEVANCE_SCORE=0.3
+BOT_TOPIC="OpenIM"
+URL_PREFIX="http://127.0.0.1:7000/"
+USE_PREPROCESS_QUERY=0
+USE_RERANKING=1
+USE_DEBUG=0
+```
+
+- Don't modify **`LLM_NAME`**
+- Update the **`OLLAMA_MODEL_NAME `** setting, select an appropriate model from [ollama library](https://ollama.com/library).
+- Modify the **`OLLAMA_BASE_URL `** with your actual base_url.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
@@ -130,6 +169,9 @@ docker-compose up --build
 ```
 
 #### Deploy RAG-GPT from source code
+
+> [!NOTE]
+> Please use Python version 3.10.x or above.
 
 ##### Set up the Python running environment
 
@@ -214,16 +256,18 @@ On the page **`http://your-server-ip:7000/open-kf-admin/#/`**, you can set the f
 
 ### Import your data
 
+#### Import websites
+
 After submitting the website URL, once the server retrieves the list of all web page URLs via crawling, you can select the web page URLs you need as the knowledge base (all selected by default). The initial `Status` is **`Recorded`**.
 
 <div align="center">
-<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-4.jpg">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-12.jpg">
 </div>
 
-You can actively refresh the page **`http://your-server-ip:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of the web page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Stored`**.
+You can actively refresh the page **`http://your-server-ip:7000/open-kf-admin/#/source`** in your browser to get the progress of web page URL processing. After the content of the web page URL has been crawled, and the Embedding calculation and storage are completed, you can see the corresponding `Size` in the admin console, and the `Status` will also be updated to **`Trained`**.
 
 <div align="center">
-<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-5.jpg">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-13.jpg">
 </div>
 
 Clicking on a webpage's URL reveals how many sub-pages the webpage is divided into, and the text size of each sub-page.
@@ -237,6 +281,23 @@ Clicking on a sub-page allows you to view its full text content. This will be ve
 <div align="center">
 <img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-11.jpg">
 </div>
+
+#### Import isolated urls
+
+Collect the URLs of the required web pages. You can submit up to `10` web page URLs at a time, and these pages can be from different domains.
+
+<div align="center">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-14.jpg">
+</div>
+
+#### Import local files
+
+Upload the required local files. You can upload up to `10` files at a time, and each file cannot exceed `30MB`. The following file types are currently supported: `[".txt", ".md", ".pdf", ".epub", ".mobi", ".html", ".docx", ".pptx", ".xlsx", ".csv"]`.
+
+<div align="center">
+<img style="display: block; margin: auto; width: 70%;" src="./doc/screenshot-15.jpg">
+</div>
+
 
 ### Test the chatbot
 

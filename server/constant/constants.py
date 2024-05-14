@@ -22,6 +22,9 @@ OPENAI_EMBEDDING_MODEL_NAME = "text-embedding-3-small"
 # Name of the ZhipuAI model used for embedding text
 ZHIPUAI_EMBEDDING_MODEL_NAME = "embedding-2"
 
+# Name of the Ollama model used for embedding text
+OLLAMA_EMBEDDING_MODEL_NAME = "mxbai-embed-large"
+
 # Maximum length of text chunks when splitting up large documents
 MAX_CHUNK_LENGTH = 1300
 
