@@ -6,7 +6,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.schema.document import Document
-from server.constant.constants import OPENAI_EMBEDDING_MODEL_NAME, ZHIPUAI_EMBEDDING_MODEL_NAME, OPENAI_EMBEDDING_MODEL_NAME, CHROMA_DB_DIR, CHROMA_COLLECTION_NAME
+from server.constant.constants import OPENAI_EMBEDDING_MODEL_NAME, ZHIPUAI_EMBEDDING_MODEL_NAME, OPENAI_EMBEDDING_MODEL_NAME, CHROMA_DB_DIR, CHROMA_COLLECTION_NAME, OLLAMA_EMBEDDING_MODEL_NAME
 from server.logger.logger_config import my_logger as logger
 from server.rag.index.embedder.zhipuai_embedder import ZhipuAIEmbeddings
 
@@ -25,7 +25,8 @@ class DocumentEmbedder:
                 api_key=os.getenv('ZHIPUAI_API_KEY'),
                 model=ZHIPUAI_EMBEDDING_MODEL_NAME)
         elif self.llm_name == 'Ollama':
-            embeddings = OllamaEmbeddings(model="mxbai-embed-large")
+            base_url = os.getenv('OLLAMA_BASE_URL')
+            embeddings = OllamaEmbeddings(base_url=base_url, model=OLLAMA_EMBEDDING_MODEL_NAME)
         else:
             raise ValueError(f"Unsupported LLM_NAME '{self.llm_name}'. Must be in ['OpenAI', 'ZhipuAI', 'Ollama'].")
 
