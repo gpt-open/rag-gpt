@@ -38,7 +38,11 @@ def check_env_variables():
             sys.exit(-1)
     else:
         # OLLAMA_MODEL_NAME: Specific Ollma model being used, e.g., 'llama3', 'llama3:70b', 'phi3', 'mistral', etc.
-        OLLAMA_MODEL_NAME = os.getenv('OLLAMA_MODEL_NAME')
+        #OLLAMA_MODEL_NAME = os.getenv('OLLAMA_MODEL_NAME')
+        OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
+        if not OLLAMA_BASE_URL.startswith('http://') and not OLLAMA_BASE_URL.startswith('https://'):
+            logger.error(f"OLLAMA_BASE_URL: '{OLLAMA_BASE_URL}' is illegal! It must start with 'http://' or 'https://'")
+            sys.exit(-1)
 
     # MIN_RELEVANCE_SCORE: Minimum score for a document to be considered relevant, and will be used in prompt, between 0.3 and 0.7.
     MIN_RELEVANCE_SCORE = os.getenv('MIN_RELEVANCE_SCORE')
