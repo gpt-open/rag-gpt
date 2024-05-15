@@ -91,7 +91,7 @@ USE_DEBUG=0
 
 - Don't modify **`LLM_NAME`**
 - Modify the **`OPENAI_API_KEY`** with your own key. Please log in to the [OpenAI website](https://platform.openai.com/api-keys) to view your API Key.
-- Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` if you wish to use GPT-4 Turbo.
+- Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` or `gpt-4o` if you want to use GPT-4.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
@@ -120,7 +120,7 @@ USE_DEBUG=0
 
 - Don't modify **`LLM_NAME`**
 - Modify the **`ZHIPUAI_API_KEY`** with your own key. Please log in to the [ZhipuAI website](https://open.bigmodel.cn/usercenter/apikeys) to view your API Key.
-- Update the **`GLM_MODEL_NAME`** setting, replacing `glm-3-turbo` with `glm-4` if you wish to use GLM-4.
+- Update the **`GLM_MODEL_NAME`** setting, replacing `glm-3-turbo` with `glm-4` if you want to use GLM-4.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
