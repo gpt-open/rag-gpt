@@ -144,9 +144,9 @@ The variables in .env
 ```shell
 LLM_NAME="Ollama"
 OLLAMA_MODEL_NAME="llama3"
-OLLAMA_BASE_URL="http://127.0.0.1:11434/v1"
+OLLAMA_BASE_URL="http://127.0.0.1:11434"
 MIN_RELEVANCE_SCORE=0.3
-BOT_TOPIC="OpenIM"
+BOT_TOPIC="xxxx"
 URL_PREFIX="http://127.0.0.1:7000/"
 USE_PREPROCESS_QUERY=0
 USE_RERANKING=1
@@ -155,7 +155,7 @@ USE_DEBUG=0
 
 - Don't modify **`LLM_NAME`**
 - Update the **`OLLAMA_MODEL_NAME `** setting, select an appropriate model from [ollama library](https://ollama.com/library).
-- Modify the **`OLLAMA_BASE_URL `** with your actual base_url.
+- If you have changed the default `IP:PORT` when starting `Ollama`, please update **`OLLAMA_BASE_URL`**.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
@@ -163,6 +163,10 @@ USE_DEBUG=0
 
 ### Step 3: Deploy RAG-GPT
 #### Deploy RAG-GPT using Docker
+
+> [!NOTE]
+> When deploying with Docker, pay special attention to the host of **URL_PREFIX** in the `.env` file. If using `Ollama`, also pay special attention to the host of **OLLAMA_BASE_URL** in the `.env` file. They need to use the actual IP address of the host machine.
+
 
 ```shell
 docker-compose up --build

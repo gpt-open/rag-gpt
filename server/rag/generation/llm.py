@@ -16,8 +16,9 @@ class LLMGenerator:
             self.client = ZhipuAI(api_key=api_key)
             self.model_name = os.getenv('GLM_MODEL_NAME')
         elif self.llm_name == 'Ollama':
+            ollama_base_url = os.getenv('OLLAMA_BASE_URL')
             self.client = OpenAI(
-                base_url = os.getenv('OLLAMA_BASE_URL'),
+                base_url = f"{ollama_base_url}/v1",
                 api_key='ollama', # required, but unused
             )
             self.model_name = os.getenv('OLLAMA_MODEL_NAME')

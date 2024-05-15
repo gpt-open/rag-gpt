@@ -49,7 +49,7 @@ RERANK_MODEL_NAME = "ms-marco-MiniLM-L-12-v2"
 MAX_HISTORY_SESSION_LENGTH = 3
 
 # Duration in seconds before a session expires
-SESSION_EXPIRE_TIME = 10800
+SESSION_EXPIRE_TIME = 1800
 
 # Base directory for serving static files
 STATIC_DIR = "web"
