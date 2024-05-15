@@ -18,10 +18,11 @@ def check_env_variables():
             logger.error(f"OPENAI_API_KEY: '{OPENAI_API_KEY}' is illegal!")
             sys.exit(-1)
 
-        # GPT_MODEL_NAME: Specific GPT model being used, e.g., 'gpt-3.5-turbo' or 'gpt-4-torbo'.
+        # GPT_MODEL_NAME: Specific GPT model being used, e.g., 'gpt-3.5-turbo' or 'gpt-4-turbo', or 'gpt-4o'.
         GPT_MODEL_NAME = os.getenv('GPT_MODEL_NAME')
-        if GPT_MODEL_NAME not in ['gpt-3.5-turbo', 'gpt-4-turbo']:
-            logger.error(f"GPT_MODEL_NAME: '{GPT_MODEL_NAME}' is illegal! Must be 'gpt-3.5-turbo' or 'gpt-4-turbo'")
+        gpt_model_name_list = ['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o']
+        if GPT_MODEL_NAME not in gpt_model_name_list:
+            logger.error(f"GPT_MODEL_NAME: '{GPT_MODEL_NAME}' is illegal! Must be in {gpt_model_name_list}")
             sys.exit(-1)
     elif LLM_NAME == 'ZhipuAI':
         # ZHIPUAI_API_KEY: API key for accessing ZhipuAI's services.
@@ -37,11 +38,7 @@ def check_env_variables():
             sys.exit(-1)
     else:
         # OLLAMA_MODEL_NAME: Specific Ollma model being used, e.g., 'llama3', 'llama3:70b', 'phi3', 'mistral', etc.
-        #OLLAMA_MODEL_NAME = os.getenv('OLLAMA_MODEL_NAME')
-        OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
-        if not OLLAMA_BASE_URL.startswith('http://') and not OLLAMA_BASE_URL.startswith('https://'):
-            logger.error(f"OLLAMA_BASE_URL: '{OLLAMA_BASE_URL}' is illegal! It must start with 'http://' or 'https://'")
-            sys.exit(-1)
+        OLLAMA_MODEL_NAME = os.getenv('OLLAMA_MODEL_NAME')
 
     # MIN_RELEVANCE_SCORE: Minimum score for a document to be considered relevant, and will be used in prompt, between 0.3 and 0.7.
     MIN_RELEVANCE_SCORE = os.getenv('MIN_RELEVANCE_SCORE')
