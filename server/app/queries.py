@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 import json
 import os
@@ -46,7 +47,7 @@ def save_user_query_history(user_id: str, query: str, answer: str, is_streaming:
         # After generating the response from LLM
         # Store user query and LLM response in Cache
         if is_streaming:
-            history_key = f"open_kf:query_history:{user_id}:stream:"
+            history_key = f"open_kf:query_history:{user_id}:stream"
             history_data = {'query': query, 'answer': answer}
         else:
             history_key = f"open_kf:query_history:{user_id}"
@@ -116,7 +117,7 @@ def rerank_documents(query: str, results: List[Tuple[Document, float]]) -> List[
             f"ID: {item['id']}\nTEXT: {item['text']}\nMETADATA: {item['metadata']}\nCHROME_SCORE: {item['chroma_score']}\nSCORE: {item['score']}"
             for item in rerank_results
         ])
-        logger.info(f"For the query: '{query}', the rerank results is:\n{rerank_info}")
+        logger.info(f"==========\nFor the query: '{query}', the rerank results is:\n{rerank_info}\n==========")
 
     return rerank_results
 
@@ -137,6 +138,49 @@ def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_
     return filter_rerank_results
 
 
+def get_recall_documents(current_query, last_query, k, user_id):
+    if not last_query:
+        logger.warning(f"last_query is empty!")
+        results = search_documents(current_query, k)
+        if USE_DEBUG:
+            results_info = "\n********************\n".join([
+                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+                for doc, score in results
+            ])
+            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
+
+        return results
+
+    combined_query = f"{last_query}\n{current_query}"
+    logger.warning(f"combined_query is '{combined_query}'")
+    with ThreadPoolExecutor() as executor:
+        future_ret1 = executor.submit(search_documents, current_query, k)
+        future_ret2 = executor.submit(search_documents, combined_query, k)
+
+        if USE_RERANKING:
+            ret1 = future_ret1.result()[:RECALL_TOP_K]
+            ret2 = future_ret2.result()[:RECALL_TOP_K]
+        else:
+            ret1 = future_ret1.result()
+            ret2 = future_ret2.result()
+
+        if USE_DEBUG:
+            results_info1 = "\n********************\n".join([
+                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+                for doc, score in ret1
+            ])
+            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info1}\n==========")
+
+            results_info2 = "\n********************\n".join([
+                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+                for doc, score in ret2
+            ])
+            logger.info(f"==========\nFor the combined_query: '{combined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
+
+    combined_results = ret1 + ret2
+    return combined_results
+
+
 def generate_answer(query: str, user_id: str, is_streaming: bool = False):
     bot_topic = BOT_TOPIC
     if USE_PREPROCESS_QUERY:
@@ -148,13 +192,14 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
         top_k = RERANK_RECALL_TOP_K
     else:
         top_k = RECALL_TOP_K
-    results = search_documents(adjust_query, top_k)
-    if USE_DEBUG:
-        results_info = "\n********************\n".join([
-            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-            for doc, score in results
-        ])
-        logger.info(f"For the query: '{query}', user_id: '{user_id}', the recall results is\n{results_info}")
+
+    last_query = ''
+    # Get the history session from the cache
+    history_session = get_user_query_history(user_id, is_streaming)
+    if history_session:
+        last_query = history_session[0]["query"]
+
+    results = get_recall_documents(adjust_query, last_query, top_k, user_id)
 
     filter_context = ''
     # Build the context with filtered documents, showing relevant documents
@@ -168,17 +213,18 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
                 for doc in filter_rerank_results[:RECALL_TOP_K]
             ])
     else:
+        if len(results) > top_k:
+            results.sort(key=lambda x: x[1], reverse=True)
+
         filter_results = filter_documents(results, MIN_RELEVANCE_SCORE)
         if filter_results:
             filter_context = "\n--------------------\n".join([
                 f"`Citation URL`: {doc.metadata['source']}\nDocument: {doc.page_content}"
-                for doc, score in filter_results
+                for doc, score in filter_results[:RECALL_TOP_K]
             ])
 
     context = ''
     if filter_context:
-        # Get the history session from the cache
-        history_session = get_user_query_history(user_id, is_streaming)
         if history_session:
             # Build the history context, showing user's historical queries and answers
             history_context = "\n--------------------\n".join([
@@ -232,6 +278,7 @@ User ID: "{user_id}"
 {context}
 
 **Response Requirements:**
+- Don't repeat the query at the beginning.
 - If unsure about the answer, proactively seek clarification.
 - Ensure that answers are strictly based on the provided context.
 - Inform users that queries unrelated to the provided context cannot be answered.
@@ -251,7 +298,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
 """
 
     if USE_DEBUG:
-        logger.info(f"Prompt is:\n{prompt}")
+        logger.info(f"$$$$$$$$$$\nPrompt is:\n{prompt}\n$$$$$$$$$$")
 
     response = llm_generator.generate(prompt, is_streaming)
     return response
@@ -382,8 +429,8 @@ def smart_query_stream():
         if len(query) > MAX_QUERY_LENGTH:
             query = query[:MAX_QUERY_LENGTH]
 
-        beg_time = time.time()
         def generate_llm():
+            beg_time = time.time()
             answer_chunks = []
             response = generate_answer(query, user_id, True)
             for chunk in response:
