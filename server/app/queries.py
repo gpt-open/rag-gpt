@@ -139,8 +139,10 @@ def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_
 
 
 def get_recall_documents(current_query, last_query, k, user_id):
-    if not last_query:
-        logger.warning(f"last_query is empty!")
+    if not USE_RERANKING or not last_query:
+        if not last_query:
+            logger.warning(f"last_query is empty!")
+
         results = search_documents(current_query, k)
         if USE_DEBUG:
             results_info = "\n********************\n".join([
