@@ -135,7 +135,7 @@ def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_
         if doc['chroma_score'] >= min_relevance_score:
             filter_rerank_results.append(doc)
     return filter_rerank_results
-    
+
 
 def generate_answer(query: str, user_id: str, is_streaming: bool = False):
     bot_topic = BOT_TOPIC
@@ -204,18 +204,18 @@ Please ensure:
 - Maintain the context and meaning of the original message.
 - Translate the 'answer' to match the language of the user's query, enhancing user experience and understanding.
 """
-    
+
     if not is_streaming:
         answer_format_prompt = """**Expected Response Format:**
 The response should be a JSON object, with 'answer' and 'source' fields.
-- "answer": "A detailed and specific answer, crafted in the query's language and fully formatted using **Markdown** syntax. **Don't repeat the `query`**",
-- "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []."]
+- "answer": "A detailed and specific answer, crafted in the query's language and fully formatted using **Markdown** syntax. **Don't repeat the `query`**".
+- "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `source`; otherwise, the URL should not be included in the `source`."]
 """
     else:
         answer_format_prompt = """**Expected Response Format:**
-The response should be fully formatted using **Mardown** syntax.
+The response should be fully formatted using **Mardown** syntax. First output the answer (without starting with 'Answer:' or 'answer:'; just output the content). Then output the `Sources`.
 - A detailed and specific answer, crafted in the query's language. Don't start with 'Answer:' or 'answer:', just output the content. Don't repeat the `query`.
-- Sources: "List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, return empty"
+- Sources: "List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, return ''. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `Sources`; otherwise, the URL should not be included in the `Sources`."
 """
 
     prompt = f"""
@@ -233,7 +233,7 @@ User ID: "{user_id}"
 
 **Response Requirements:**
 - If unsure about the answer, proactively seek clarification.
-- Ensure that answers are strictly based on the provided context and are directly relevant to `{bot_topic}`.
+- Ensure that answers are strictly based on the provided context.
 - Inform users that queries unrelated to the provided context cannot be answered.
 - Format the answer using Markdown syntax for clarity and readability.
 - Craft responses in the same language as the query to enhance user understanding.
@@ -255,7 +255,7 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
 
     response = llm_generator.generate(prompt, is_streaming)
     return response
-
+    
 
 def check_smart_query(f):
     @wraps(f)
