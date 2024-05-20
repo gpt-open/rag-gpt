@@ -17,6 +17,7 @@ Quickly launch an intelligent customer service system with Flask, LLM, RAG, incl
   - [Step 2: Configure variables of .env](#step-2-configure-variables-of-env)
     - [Using OpenAI as the LLM base](#using-openai-as-the-llm-base)
     - [Using ZhipuAI as the LLM base](#using-zhipuai-as-the-llm-base)
+    - [Using DeepSeek as the LLM base](#using-deepseek-as-the-llm-base)
     - [Using local LLMs](#using-local-llms)
   - [Step 3: Deploy RAG-GPT](#step-3-deploy-rag-gpt)
     - [Deploy RAG-GPT using Docker](#deploy-rag-gpt-using-docker)
@@ -92,13 +93,14 @@ USE_DEBUG=0
 - Don't modify **`LLM_NAME`**
 - Modify the **`OPENAI_API_KEY`** with your own key. Please log in to the [OpenAI website](https://platform.openai.com/api-keys) to view your API Key.
 - Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` or `gpt-4o` if you want to use GPT-4.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
-- Adjust **`URL_PREFIX`** to match your website's domain.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 #### Using ZhipuAI as the LLM base
 
-If you cannot use OpenAI's API services, consider using ZhipuAI as an alternative.
+If you cannot use OpenAI's API services, consider using ZhipuAI as an alternative. 
+
 
 ```shell
 cp env_of_zhipuai .env
@@ -121,10 +123,44 @@ USE_DEBUG=0
 - Don't modify **`LLM_NAME`**
 - Modify the **`ZHIPUAI_API_KEY`** with your own key. Please log in to the [ZhipuAI website](https://open.bigmodel.cn/usercenter/apikeys) to view your API Key.
 - Update the **`GLM_MODEL_NAME`** setting, replacing `glm-3-turbo` with `glm-4` if you want to use GLM-4.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
-- Adjust **`URL_PREFIX`** to match your website's domain.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
+#### Using DeepSeek as the LLM base
+
+If you cannot use OpenAI's API services, consider using DeepSeek as an alternative.
+
+> [!NOTE]
+> DeepSeek does not provide an `Embedding API`, so here we use ZhipuAI's `Embedding API`.
+
+
+```shell
+cp env_of_deepseek .env
+```
+
+The variables in .env
+
+```shell
+LLM_NAME="DeepSeek"
+ZHIPUAI_API_KEY="xxxx"
+DEEPSEEK_API_KEY="xxxx"
+DEEPSEEK_MODEL_NAME="deepseek-chat"
+MIN_RELEVANCE_SCORE=0.3
+BOT_TOPIC="xxxx"
+URL_PREFIX="http://127.0.0.1:7000/"
+USE_PREPROCESS_QUERY=0
+USE_RERANKING=1
+USE_DEBUG=0
+```
+
+- Don't modify **`LLM_NAME`**
+- Modify the **`ZHIPUAI_API_KEY`** with your own key. Please log in to the [ZhipuAI website](https://open.bigmodel.cn/usercenter/apikeys) to view your API Key.
+- Modify the **`DEEPKSEEK_API_KEY`** with your own key. Please log in to the [DeepSeek website](https://platform.deepseek.com/api_keys) to view your API Key.
+- Update the **`DEEPSEEK_MODEL_NAME `** setting if you want to use other models of DeepSeek.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
+- For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 #### Using local LLMs
 
@@ -143,7 +179,7 @@ The variables in .env
 
 ```shell
 LLM_NAME="Ollama"
-OLLAMA_MODEL_NAME="llama3"
+OLLAMA_MODEL_NAME="xxxx"
 OLLAMA_BASE_URL="http://127.0.0.1:11434"
 MIN_RELEVANCE_SCORE=0.3
 BOT_TOPIC="xxxx"
@@ -155,9 +191,9 @@ USE_DEBUG=0
 
 - Don't modify **`LLM_NAME`**
 - Update the **`OLLAMA_MODEL_NAME `** setting, select an appropriate model from [ollama library](https://ollama.com/library).
-- If you have changed the default `IP:PORT` when starting `Ollama`, please update **`OLLAMA_BASE_URL`**.
-- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `query rewriting`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
-- Adjust **`URL_PREFIX`** to match your website's domain.
+- If you have changed the default `IP:PORT` when starting `Ollama`, please update **`OLLAMA_BASE_URL`**. Please pay special attention, only enter the IP (domain) and PORT here, without appending a URI.
+- Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
+- Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 

@@ -22,15 +22,19 @@ class LLMGenerator:
                 api_key='ollama', # required, but unused
             )
             self.model_name = os.getenv('OLLAMA_MODEL_NAME')
+        elif self.llm_name == 'DeepSeek':
+            api_key = os.getenv('DEEPSEEK_API_KEY')
+            self.client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
+            self.model_name = os.getenv('DEEPSEEK_MODEL_NAME')
         else:
-            raise ValueError(f"Unsupported LLM_NAME: '{self.llm_name}'. Must be in['OpenAI', 'ZhipuAI', 'Ollama']")
+            raise ValueError(f"Unsupported LLM_NAME: '{self.llm_name}'. Must be in['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek']")
 
     def generate(self, prompt: str, is_streaming: bool = False):
         if is_streaming:
-            if self.llm_name == 'OpenAI':
+            if self.llm_name in ['OpenAI', 'Ollama', 'DeepSeek']:
                 response = self.client.chat.completions.create(
                     model=self.model_name,
-                    messages=[{"role": "system", "content": prompt}],
+                    messages=[{"role": "user", "content": prompt}],
                     temperature=0,
                     #top_p=0.7,
                     stream=True
@@ -40,24 +44,16 @@ class LLMGenerator:
                     model=self.model_name,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.1,
-                    #top_p=0.7,
-                    stream=True
-                )
-            else:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0,
                     #top_p=0.7,
                     stream=True
                 )
             return response
         else:
-            if self.llm_name == 'OpenAI':
+            if self.llm_name in ['OpenAI', 'Ollama', 'DeepSeek']:
                 response = self.client.chat.completions.create(
                     model=self.model_name,
                     response_format={"type": "json_object"},
-                    messages=[{"role": "system", "content": prompt}],
+                    messages=[{"role": "user", "content": prompt}],
                     temperature=0,
                     #top_p=0.7,
                     stream=False
@@ -70,16 +66,6 @@ class LLMGenerator:
                     #top_p=0.7,
                     stream=False
                 )
-            else:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    response_format={"type": "json_object"},
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0,
-                    #top_p=0.7,
-                    stream=False
-                )
-            return response
 
 
 llm_generator = LLMGenerator()

@@ -139,48 +139,58 @@ def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_
 
 
 def get_recall_documents(current_query, last_query, k, user_id):
-    if not USE_RERANKING or not last_query:
-        if not last_query:
-            logger.warning(f"last_query is empty!")
+    results = search_documents(current_query, k)
+    if USE_DEBUG:
+        results_info = "\n********************\n".join([
+            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+            for doc, score in results
+        ])
+        logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
 
-        results = search_documents(current_query, k)
-        if USE_DEBUG:
-            results_info = "\n********************\n".join([
-                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-                for doc, score in results
-            ])
-            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
+    return results
 
-        return results
+    #if not USE_RERANKING or not last_query:
+    #    if not last_query:
+    #        logger.warning(f"last_query is empty!")
 
-    combined_query = f"{last_query}\n{current_query}"
-    logger.warning(f"combined_query is '{combined_query}'")
-    with ThreadPoolExecutor() as executor:
-        future_ret1 = executor.submit(search_documents, current_query, k)
-        future_ret2 = executor.submit(search_documents, combined_query, k)
+    #    results = search_documents(current_query, k)
+    #    if USE_DEBUG:
+    #        results_info = "\n********************\n".join([
+    #            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+    #            for doc, score in results
+    #        ])
+    #        logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
 
-        if USE_RERANKING:
-            ret1 = future_ret1.result()[:RECALL_TOP_K]
-            ret2 = future_ret2.result()[:RECALL_TOP_K]
-        else:
-            ret1 = future_ret1.result()
-            ret2 = future_ret2.result()
+    #    return results
 
-        if USE_DEBUG:
-            results_info1 = "\n********************\n".join([
-                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-                for doc, score in ret1
-            ])
-            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info1}\n==========")
+    #combined_query = f"{last_query}\n{current_query}"
+    #logger.warning(f"combined_query is '{combined_query}'")
+    #with ThreadPoolExecutor() as executor:
+    #    future_ret1 = executor.submit(search_documents, current_query, k)
+    #    future_ret2 = executor.submit(search_documents, combined_query, k)
 
-            results_info2 = "\n********************\n".join([
-                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-                for doc, score in ret2
-            ])
-            logger.info(f"==========\nFor the combined_query: '{combined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
+    #    if USE_RERANKING:
+    #        ret1 = future_ret1.result()[:RECALL_TOP_K]
+    #        ret2 = future_ret2.result()[:RECALL_TOP_K]
+    #    else:
+    #        ret1 = future_ret1.result()
+    #        ret2 = future_ret2.result()
 
-    combined_results = ret1 + ret2
-    return combined_results
+    #    if USE_DEBUG:
+    #        results_info1 = "\n********************\n".join([
+    #            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+    #            for doc, score in ret1
+    #        ])
+    #        logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info1}\n==========")
+
+    #        results_info2 = "\n********************\n".join([
+    #            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+    #            for doc, score in ret2
+    #        ])
+    #        logger.info(f"==========\nFor the combined_query: '{combined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
+
+    #combined_results = ret1 + ret2
+    #return combined_results
 
 
 def generate_answer(query: str, user_id: str, is_streaming: bool = False):
@@ -225,46 +235,59 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
                 for doc, score in filter_results[:RECALL_TOP_K]
             ])
 
+    history_context = ''
+    if history_session:
+        # Build the history context, showing user's historical queries and answers
+        history_context = "\n--------------------\n".join([
+            f"History Query: {item['query']}\nHistory Answer: {item['answer']}"
+            for item in history_session
+        ])
+
     context = ''
     if filter_context:
-        if history_session:
-            # Build the history context, showing user's historical queries and answers
-            history_context = "\n--------------------\n".join([
-                f"History Query: {item['query']}\nHistory Answer: {item['answer']}"
-                for item in history_session
-            ])
-            context = f"""Documents (Sorted by Relevance Score from high to low):
-{filter_context}
+        if history_context:
+            context = f"""User Query History (Sorted by request time from most recent to oldest):
+{history_context}
 
-User Query History (Sorted by request time from most recent to oldest):
-{history_context}"""
+Documents (Sorted by Relevance Score from high to low):
+{filter_context}
+"""
         else:
             context = f"""Documents (Sorted by Relevance Score from high to low):
-{filter_context}"""
+{filter_context}
+"""
     else:
         # When no directly related documents are found, provide standard friendly response and guidance
-        context = f"""No documents found directly related to the current query!
+        fallback_answer = f"""No documents found directly related to the current query!
 Please provide the response in the following format and ensure that the 'answer' part is translated into the same language as the user's query:
 
 "I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
 
 Please ensure:
 - Maintain the context and meaning of the original message.
-- Translate the 'answer' to match the language of the user's query, enhancing user experience and understanding.
+- Translate the 'answer' to match the language of the user's query, enhancing user experience and understanding."""
+        if history_context:
+            context = f"""User Query History (Sorted by request time from most recent to oldest):
+{history_context}
+
+Documents (Sorted by Relevance Score from high to low):
+{fallback_answer}
+"""
+        else:
+            context = f"""Documents (Sorted by Relevance Score from high to low):
+{fallback_answer}
 """
 
     if not is_streaming:
-        answer_format_prompt = """**Expected Response Format:**
+        answer_format_prompt = '''**Expected Response Format:**
 The response should be a JSON object, with 'answer' and 'source' fields.
 - "answer": "A detailed and specific answer, crafted in the query's language and fully formatted using **Markdown** syntax. **Don't repeat the `query`**".
-- "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `source`; otherwise, the URL should not be included in the `source`."]
-"""
+- "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `source`; otherwise, the URL should not be included in the `source`."]'''
     else:
-        answer_format_prompt = """**Expected Response Format:**
+        answer_format_prompt = '''**Expected Response Format:**
 The response should be fully formatted using **Mardown** syntax. First output the answer (without starting with 'Answer:' or 'answer:'; just output the content). Then output the `Sources`.
 - A detailed and specific answer, crafted in the query's language. Don't start with 'Answer:' or 'answer:', just output the content. Don't repeat the `query`.
-- Sources: "List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, return ''. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `Sources`; otherwise, the URL should not be included in the `Sources`."
-"""
+- Sources: "List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, return ''. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `Sources`; otherwise, the URL should not be included in the `Sources`."'''
 
     prompt = f"""
 This smart customer service bot is designed to provide users with targeted information related to `{bot_topic}`.
@@ -443,9 +466,8 @@ def smart_query_stream():
                     # Send each answer segment
                     yield content
 
-                if LLM_NAME == 'ZhipuAI':
-                    if chunk.usage:
-                        logger.warning(f"[Track token consumption of streaming] for query: '{query}', usage={chunk.usage}")
+                if hasattr(chunk, 'usage'):
+                    logger.warning(f"[Track token consumption of streaming] for query: '{query}', usage={chunk.usage}")
             # After the streaming response is complete, save to Cache and SQLite
             answer = ''.join(answer_chunks)
             timecost = time.time() - beg_time
