@@ -27,8 +27,13 @@ class DocumentEmbedder:
         elif self.llm_name == 'Ollama':
             base_url = os.getenv('OLLAMA_BASE_URL')
             embeddings = OllamaEmbeddings(base_url=base_url, model=OLLAMA_EMBEDDING_MODEL_NAME)
+        elif self.llm_name == 'DeepSeek':
+            # DeepSeek uses ZhipuAI's Embedding API
+            embeddings = ZhipuAIEmbeddings(
+                api_key=os.getenv('ZHIPUAI_API_KEY'),
+                model=ZHIPUAI_EMBEDDING_MODEL_NAME)
         else:
-            raise ValueError(f"Unsupported LLM_NAME '{self.llm_name}'. Must be in ['OpenAI', 'ZhipuAI', 'Ollama'].")
+            raise ValueError(f"Unsupported LLM_NAME '{self.llm_name}'. Must be in ['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek'].")
 
         collection_name = CHROMA_COLLECTION_NAME
         persist_directory = CHROMA_DB_DIR

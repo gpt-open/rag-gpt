@@ -3,10 +3,13 @@ import sys
 from server.logger.logger_config import my_logger as logger
 
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+
 def check_env_variables():
-    # LLM_NAME: Name of the language model being used, should be 'OpenAI' or 'ZhipuAI' or 'Ollama'.
+    # LLM_NAME: Name of the language model being used, should be in ['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek'].
     LLM_NAME = os.getenv('LLM_NAME')
-    llm_name_list = ['OpenAI', 'ZhipuAI', 'Ollama']
+    llm_name_list = ['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek']
     if LLM_NAME not in llm_name_list:
         logger.error(f"LLM_NAME: '{LLM_NAME}' is illegal! Must be in {llm_name_list}.")
         sys.exit(-1)
@@ -36,12 +39,40 @@ def check_env_variables():
         if GLM_MODEL_NAME not in ['glm-3-turbo', 'glm-4']:
             logger.error(f"GLM_MODEL_NAME: '{GLM_MODEL_NAME}' is illegal! Must be 'glm-3-turbo' or 'glm-4'")
             sys.exit(-1)
-    else:
+    elif LLM_NAME == 'Ollama':
         # OLLAMA_MODEL_NAME: Specific Ollma model being used, e.g., 'llama3', 'llama3:70b', 'phi3', 'mistral', etc.
-        #OLLAMA_MODEL_NAME = os.getenv('OLLAMA_MODEL_NAME')
+        OLLAMA_MODEL_NAME = os.getenv('OLLAMA_MODEL_NAME')
+        if OLLAMA_MODEL_NAME == 'xxxx':
+            logger.error(f"OLLAMA_MODEL_NAME: '{OLLAMA_MODEL_NAME}' is illegal! Mast be 'llama3', 'llama3:70b', 'phi3', 'mistral', etc.")
+            sys.exit(-1)
+
         OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
         if not OLLAMA_BASE_URL.startswith('http://') and not OLLAMA_BASE_URL.startswith('https://'):
-            logger.error(f"OLLAMA_BASE_URL: '{OLLAMA_BASE_URL}' is illegal! It must start with 'http://' or 'https://'")
+            logger.error(f"OLLAMA_BASE_URL: '{OLLAMA_BASE_URL}' is illegal! It must be like 'http://IP:PORT' or 'https://IP:PORT'")
+            sys.exit(-1)
+
+        # Count the number of '/'
+        slash_count = OLLAMA_BASE_URL.count('/')
+        if slash_count > 2:
+            logger.error(f"OLLAMA_BASE_URL: '{OLLAMA_BASE_URL}' is illegal! It must be like 'http://IP:PORT' or 'https://IP:PORT'")
+            sys.exit(-1)
+    elif LLM_NAME == 'DEEPSEEK':
+        # ZHIPUAI_API_KEY: API key for accessing ZhipuAI's services.
+        ZHIPUAI_API_KEY = os.getenv('ZHIPUAI_API_KEY')
+        if ZHIPUAI_API_KEY == 'xxxx':
+            logger.error(f"ZHIPUAI_API_KEY: '{ZHIPUAI_API_KEY}' is illegal!")
+            sys.exit(-1)
+
+        # DEEPSEEK_API_KEY: API key for accessing DeepSeek's services.
+        DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
+        if DEEPSEEK_API_KEY == 'xxxx':
+            logger.error(f"DEEPSEEK_API_KEY: '{DEEPSEEK_API_KEY}' is illegal!")
+            sys.exit(-1)
+
+        # DEEPSEEK_MODEL_NAME: Specific DeepSeek model being used, e.g., 'deepseek-chat' or 'deepseek-coder'.
+        DEEPSEEK_MODEL_NAME = os.getenv('DEEPSEEK_MODEL_NAME')
+        if DEEPSEEK_MODEL_NAME not in ['deepseek-chat', 'deepseek-coder']:
+            logger.error(f"DEEPSEEK_MODEL_NAME: '{DEEPSEEK_MODEL_NAME}' is illegal! Must be 'deepseek-chat' or 'deepseek-coder'")
             sys.exit(-1)
 
     # MIN_RELEVANCE_SCORE: Minimum score for a document to be considered relevant, and will be used in prompt, between 0.3 and 0.7.
