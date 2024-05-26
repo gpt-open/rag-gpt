@@ -3,6 +3,30 @@ import py3langid as langid
 from server.logger.logger_config import my_logger as logger
 
 
+def detect_query_lang(query: str) -> str:
+    # Dictionary to map language codes to full language names
+    lang_map = {
+        'en': 'English',
+        'zh': 'Chinese',
+        'fr': 'French',
+        'es': 'Spanish',
+        'pt': 'Portuguese',
+        'de': 'German',
+        'ru': 'Russian',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'hi': 'Hindi',
+        'ar': 'Arabic'
+    }
+
+    # Detect the language of the query
+    lang, _ = langid.classify(query)
+
+    # Get the full language name
+    full_language = lang_map.get(lang, 'English')
+    return full_language
+
+
 def query_rewrite(query: str, bot_topic: str) -> str:
     # Detect the language of the query
     lang, _ = langid.classify(query)

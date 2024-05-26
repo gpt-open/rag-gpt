@@ -29,7 +29,7 @@ class LLMGenerator:
         else:
             raise ValueError(f"Unsupported LLM_NAME: '{self.llm_name}'. Must be in['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek']")
 
-    def generate(self, prompt: str, is_streaming: bool = False):
+    def generate(self, prompt: str, is_streaming: bool = False, is_json: bool = False):
         if is_streaming:
             if self.llm_name in ['OpenAI', 'Ollama', 'DeepSeek']:
                 response = self.client.chat.completions.create(
@@ -50,14 +50,23 @@ class LLMGenerator:
             return response
         else:
             if self.llm_name in ['OpenAI', 'Ollama', 'DeepSeek']:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    response_format={"type": "json_object"},
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0,
-                    #top_p=0.7,
-                    stream=False
-                )
+                if is_json:
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        response_format={"type": "json_object"},
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0,
+                        #top_p=0.7,
+                        stream=False
+                    )
+                else:
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0,
+                        #top_p=0.7,
+                        stream=False
+                    )
             elif self.llm_name == 'ZhipuAI':
                 response = self.client.chat.completions.create(
                     model=self.model_name,
@@ -66,6 +75,7 @@ class LLMGenerator:
                     #top_p=0.7,
                     stream=False
                 )
+            return response
 
 
 llm_generator = LLMGenerator()

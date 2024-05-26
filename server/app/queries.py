@@ -15,7 +15,7 @@ from server.app.utils.diskcache_client import diskcache_client
 from server.app.utils.diskcache_lock import diskcache_lock
 from server.logger.logger_config import my_logger as logger
 from server.rag.generation.llm import llm_generator
-from server.rag.pre_retrieval.query_transformation.rewrite import query_rewrite
+from server.rag.pre_retrieval.query_transformation.rewrite import query_rewrite, detect_query_lang
 from server.rag.post_retrieval.rerank.flash_ranker import RerankRequest, reranker
 from server.rag.retrieval.vector_search import vector_search
 
@@ -81,8 +81,30 @@ def save_user_query_history(user_id: str, query: str, answer: str, is_streaming:
             conn.close()
 
 
-def preprocess_query(query: str, bot_topic: str) -> str:
-    return query_rewrite(query, bot_topic)
+def preprocess_query(query: str, bot_topic: str, history_context: str) -> str:
+    return query_rewrite(query, bot_topic, history_contxt)
+
+
+def refine_query(query: str, history_context: str, lang: str) -> str:
+    prompt = f"""Given a conversation (between Human and Assistant) and a follow up message from Human, using the prior knowledge relationships, rewrite the message to be a standalone and detailed question (Note: The language should be consistent with the follow up message from Human; for instance, reply in Chinese if the question was asked in Chinese and in English if it was asked in English!) that captures all relevant context from the conversation.
+
+Chat History (Sorted by request time from most recent to oldest):
+{history_context}
+
+Follow Up Input: {query}
+
+**NOTE:** The detected language of the Input is '{lang}'. Please respond in '{lang}'.
+
+Refined Standalone Question:"""
+
+    beg_time = int(time.time())
+    response = llm_generator.generate(prompt, False, False)
+    timecost = int(time.time()) - beg_time
+    adjust_query = response.choices[0].message.content
+    logger.warning(f"For the query: '{query}', the refined query is '{adjust_query}'. The timecost is {timecost}")
+    if hasattr(response, 'usage'):
+        logger.warning(f"[Track token consumption] for refine_query: '{query}', usage={response.usage}")
+    return adjust_query
 
 
 def search_documents(query: str, k: int) -> List[Tuple[Document, float]]:
@@ -138,20 +160,20 @@ def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_
     return filter_rerank_results
 
 
-def get_recall_documents(current_query, last_query, k, user_id):
-    results = search_documents(current_query, k)
+def get_recall_documents(current_query, refined_query, k, user_id):
+    results = search_documents(refined_query, k)
     if USE_DEBUG:
         results_info = "\n********************\n".join([
             f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
             for doc, score in results
         ])
-        logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
+        logger.info(f"==========\nFor the refined_query: '{refined_query}', '{user_id}', the recall results is\n{results_info}\n==========")
 
     return results
 
-    #if not USE_RERANKING or not last_query:
-    #    if not last_query:
-    #        logger.warning(f"last_query is empty!")
+    #if not USE_RERANKING:
+    #    if not refined_query:
+    #        logger.warning(f"refined_query is empty!")
 
     #    results = search_documents(current_query, k)
     #    if USE_DEBUG:
@@ -163,11 +185,9 @@ def get_recall_documents(current_query, last_query, k, user_id):
 
     #    return results
 
-    #combined_query = f"{last_query}\n{current_query}"
-    #logger.warning(f"combined_query is '{combined_query}'")
     #with ThreadPoolExecutor() as executor:
     #    future_ret1 = executor.submit(search_documents, current_query, k)
-    #    future_ret2 = executor.submit(search_documents, combined_query, k)
+    #    future_ret2 = executor.submit(search_documents, refined_query, k)
 
     #    if USE_RERANKING:
     #        ret1 = future_ret1.result()[:RECALL_TOP_K]
@@ -187,7 +207,7 @@ def get_recall_documents(current_query, last_query, k, user_id):
     #            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
     #            for doc, score in ret2
     #        ])
-    #        logger.info(f"==========\nFor the combined_query: '{combined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
+    #        logger.info(f"==========\nFor the refined_query: '{refined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
 
     #combined_results = ret1 + ret2
     #return combined_results
@@ -195,8 +215,24 @@ def get_recall_documents(current_query, last_query, k, user_id):
 
 def generate_answer(query: str, user_id: str, is_streaming: bool = False):
     bot_topic = BOT_TOPIC
-    if USE_PREPROCESS_QUERY:
-        adjust_query = preprocess_query(query, bot_topic)
+
+    # Detect the language of the query
+    lang = detect_query_lang(query)
+    logger.warning(f"For query: '{query}', detect the language is '{lang}'!")
+
+    # Get the history session from the cache
+    history_session = get_user_query_history(user_id, is_streaming)
+    history_context = ''
+    if history_session:
+        # Build the history context, showing user's historical queries and answers
+        #history_context = "\n--------------------\n".join([
+        history_context = "\n".join([
+            f"Human: {item['query']}\nAssistant: {item['answer']}"
+            for item in history_session
+        ])
+
+    if USE_PREPROCESS_QUERY and history_context:
+        adjust_query = refine_query(query, history_context, lang)
     else:
         adjust_query = query
 
@@ -205,13 +241,7 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
     else:
         top_k = RECALL_TOP_K
 
-    last_query = ''
-    # Get the history session from the cache
-    history_session = get_user_query_history(user_id, is_streaming)
-    if history_session:
-        last_query = history_session[0]["query"]
-
-    results = get_recall_documents(adjust_query, last_query, top_k, user_id)
+    results = get_recall_documents(query, adjust_query, top_k, user_id)
 
     filter_context = ''
     # Build the context with filtered documents, showing relevant documents
@@ -235,86 +265,71 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
                 for doc, score in filter_results[:RECALL_TOP_K]
             ])
 
-    history_context = ''
-    if history_session:
-        # Build the history context, showing user's historical queries and answers
-        history_context = "\n--------------------\n".join([
-            f"History Query: {item['query']}\nHistory Answer: {item['answer']}"
-            for item in history_session
-        ])
-
-    context = ''
     if filter_context:
-        if history_context:
-            context = f"""User Query History (Sorted by request time from most recent to oldest):
+        context = f"""Chat History (Sorted by request time from most recent to oldest):
 {history_context}
 
-Documents (Sorted by Relevance Score from high to low):
-{filter_context}
-"""
-        else:
-            context = f"""Documents (Sorted by Relevance Score from high to low):
+Documents Information:
 {filter_context}
 """
     else:
         # When no directly related documents are found, provide standard friendly response and guidance
-        fallback_answer = f"""No documents found directly related to the current query!
-Please provide the response in the following format and ensure that the 'answer' part is translated into the same language as the user's query:
+        fallback_answer = f"""No documents found directly related to the current question!
+Please provide the response in the following format and ensure that the 'answer' part is translated into the same language as the user's question:
 
 "I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
 
 Please ensure:
+- If the user's question is a straightforward greeting, the assistant will offer a friendly standard response, guiding users to seek information or services related to `{bot_topic}`. Don't start with "I'm sorry, I cannot find a specific answer about '{query}' from the information provided.".
 - Maintain the context and meaning of the original message.
-- Translate the 'answer' to match the language of the user's query, enhancing user experience and understanding."""
-        if history_context:
-            context = f"""User Query History (Sorted by request time from most recent to oldest):
+- Respond in the language of the original question; for instance, reply in Chinese if the question was asked in Chinese and in English if it was asked in English!"""
+
+        context = f"""Chat History (Sorted by request time from most recent to oldest):
 {history_context}
 
-Documents (Sorted by Relevance Score from high to low):
-{fallback_answer}
-"""
-        else:
-            context = f"""Documents (Sorted by Relevance Score from high to low):
+Documents Information:
 {fallback_answer}
 """
 
     if not is_streaming:
         answer_format_prompt = '''**Expected Response Format:**
 The response should be a JSON object, with 'answer' and 'source' fields.
-- "answer": "A detailed and specific answer, crafted in the query's language and fully formatted using **Markdown** syntax. **Don't repeat the `query`**".
+- "answer": "A detailed and specific answer, crafted in the question's language and fully formatted using **Markdown** syntax. **Don't repeat the question**". Only cite the most relevant Documents that answer the question accurately.
 - "source": ["List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, use an empty list []. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `source`; otherwise, the URL should not be included in the `source`."]'''
     else:
         answer_format_prompt = '''**Expected Response Format:**
-The response should be fully formatted using **Mardown** syntax. First output the answer (without starting with 'Answer:' or 'answer:'; just output the content). Then output the `Sources`.
-- A detailed and specific answer, crafted in the query's language. Don't start with 'Answer:' or 'answer:', just output the content. Don't repeat the `query`.
+The response should be fully formatted using **Mardown** syntax (Note: Don't start with 'Answer:' or 'answer:'). First output the answer. Then output the Sources.
+- A detailed and specific answer, crafted in the question's language. Don't repeat the question. Only cite the most relevant Documents that answer the question accurately.
 - Sources: "List only unique `Citation URL` from the context that are directly related to the answer. Ensure that each URL is listed only once. If no documents are referenced, or the documents are not relevant, return ''. The number of `Citation URL` should not exceed {RECALL_TOP_K}. The generated answer must have indeed used content from the document corresponding to the `Citation URL` before including that URL in the `Sources`; otherwise, the URL should not be included in the `Sources`."'''
 
     prompt = f"""
-This smart customer service bot is designed to provide users with targeted information related to `{bot_topic}`.
+You are a smart customer service assistant and problem-solver, tasked to answer any question about `{bot_topic}`. Using the provided context, answer the user's question to the best of your ability using the resources provided.
 
-If the query is similar to greeting phrases like ['Hi', 'Hello', 'Who are you?'], including greetings in other languages such as Chinese, Russian, French, Spanish, German, Japanese, Arabic, Hindi, Portuguese, Korean, etc. The bot will offer a friendly standard response, guiding users to seek information or services related to `{bot_topic}`.
+If the user's question is a straightforward greeting, the assistant will offer a friendly standard response, guiding users to seek information or services related to `{bot_topic}`.
 
-Based on the documents and the user's historical queries, the bot aims to provide accurate and comprehensive answers in the language of the user's query. If the query is not related to any available documents, the user is informed that no relevant answer can be provided.
+Base on the Chat History and the provided context. First, analyze the provided context information without assuming prior knowledge. Identify all relevant aspects of knowledge contained within. Then, from various perspectives and angles, answer questions as thoroughly and comprehensively as possible to better address and resolve the user's question. If the question is not related to the provided context, the user is informed that no relevant answer can be provided.
 
-User ID: "{user_id}"
-**Query:** "{query}"
+**Question:** {adjust_query}
 
-**Context for Answering the Query:**
+**Context for Answering the Question:**
 {context}
 
 **Response Requirements:**
-- Don't repeat the query at the beginning.
+- Don't repeat the question at the beginning.
 - If unsure about the answer, proactively seek clarification.
 - Ensure that answers are strictly based on the provided context.
-- Inform users that queries unrelated to the provided context cannot be answered.
+- Inform users that questions unrelated to the provided context cannot be answered.
 - Format the answer using Markdown syntax for clarity and readability.
-- Craft responses in the same language as the query to enhance user understanding.
+- Respond in the language of the original question; for instance, reply in Chinese if the question was asked in Chinese and in English if it was asked in English!
+
+**REMEMBER:** Please do not fabricate any knowledge. If you cannot get knowledge from the provided context, please directly state that you do not know, rather than constructing nonexistent and potentially fake information!!!
+
+**NOTE:** The detected language of the question is '{lang}'. Please respond in '{lang}'.
 
 {answer_format_prompt}
 
-Please format `answer` as follows:
-The `answer` must be fully formatted using Markdown syntax to ensure proper rendering in the browser or APP. This includes:
-- The `answer` must not be identical to the `query`.
+Please format answer as follows:
+The answer must be fully formatted using Markdown syntax. This includes:
 - **Bold** (`**bold**`) and *italic* (`*italic*`) text for emphasis.
 - Unordered lists (`- item`) for itemization and ordered lists (`1. item`) for sequencing.
 - `Inline code` (`` `Inline code` ``) for brief code snippets and (` ``` `) for longer examples, specifying the programming language for syntax highlighting when possible.
@@ -325,7 +340,11 @@ The `answer` must be fully formatted using Markdown syntax to ensure proper rend
     if USE_DEBUG:
         logger.info(f"$$$$$$$$$$\nPrompt is:\n{prompt}\n$$$$$$$$$$")
 
-    response = llm_generator.generate(prompt, is_streaming)
+    if is_streaming:
+        is_json = False
+    else:
+        is_json = True
+    response = llm_generator.generate(prompt, is_streaming, is_json)
     return response
     
 
@@ -404,7 +423,8 @@ def smart_query():
 
         beg_time = time.time()
         response = generate_answer(query, user_id, False)
-        logger.warning(f"[Track token consumption] for query: '{query}', usage={response.usage}")
+        if hasattr(response, 'usage'):
+            logger.warning(f"[Track token consumption] for smart_query: '{query}', usage={response.usage}")
         answer = response.choices[0].message.content
 
         #logger.warning(f"The answer is:\n{answer}")
@@ -467,7 +487,7 @@ def smart_query_stream():
                     yield content
 
                 if hasattr(chunk, 'usage'):
-                    logger.warning(f"[Track token consumption of streaming] for query: '{query}', usage={chunk.usage}")
+                    logger.warning(f"[Track token consumption of streaming] for smart_query_stream: '{query}', usage={chunk.usage}")
             # After the streaming response is complete, save to Cache and SQLite
             answer = ''.join(answer_chunks)
             timecost = time.time() - beg_time
