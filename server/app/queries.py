@@ -97,9 +97,9 @@ Follow Up Input: {query}
 
 Refined Standalone Question:"""
 
-    beg_time = int(time.time())
+    beg_time = time.time()
     response = llm_generator.generate(prompt, False, False)
-    timecost = int(time.time()) - beg_time
+    timecost = time.time() - beg_time
     adjust_query = response.choices[0].message.content
     logger.warning(f"For the query: '{query}', the refined query is '{adjust_query}'. The timecost is {timecost}")
     if hasattr(response, 'usage'):
