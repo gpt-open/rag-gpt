@@ -46,7 +46,7 @@ RERANK_RECALL_TOP_K = 10
 RERANK_MODEL_NAME = "ms-marco-MiniLM-L-12-v2"
 
 # Maximum number of historical user sessions to retain
-MAX_HISTORY_SESSION_LENGTH = 3
+MAX_HISTORY_SESSION_LENGTH = 2
 
 # Duration in seconds before a session expires
 SESSION_EXPIRE_TIME = 1800

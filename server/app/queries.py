@@ -128,11 +128,13 @@ def rerank_documents(query: str, results: List[Tuple[Document, float]]) -> List[
         index += 1
         passages.append(item)
 
-    beg_time = time.time()
-    rerankrequest = RerankRequest(query=query, passages=passages)
-    rerank_results = reranker.rerank(rerankrequest)
-    timecost = time.time() - beg_time
-    logger.warning(f"For the query: '{query}', rerank_documents, the timecost is {timecost}")
+    rerank_results = []
+    if passages:
+        beg_time = time.time()
+        rerankrequest = RerankRequest(query=query, passages=passages)
+        rerank_results = reranker.rerank(rerankrequest)
+        timecost = time.time() - beg_time
+        logger.warning(f"For the query: '{query}', rerank_documents, the timecost is {timecost}")
 
     if USE_DEBUG:
         rerank_info = "\n--------------------\n".join([
@@ -152,65 +154,51 @@ def filter_documents(results: List[Tuple[Document, float]], min_relevance_score:
     return filter_results
 
 
-def filter_rerank_documents(rerank_results: List[Dict[str, Any]], min_relevance_score: float) -> List[Dict[str, Any]]:
-    filter_rerank_results = []
-    for doc in rerank_results:
-        if doc['chroma_score'] >= min_relevance_score:
-            filter_rerank_results.append(doc)
-    return filter_rerank_results
+def get_recall_documents(current_query, refined_query, k, user_id, min_relevance_score: float) -> List[Tuple[Document, float]]:
+    if current_query == refined_query:
+        ret = search_documents(current_query, k)
+        results = filter_documents(ret, min_relevance_score)
+        if USE_DEBUG:
+            results_info = "\n********************\n".join([
+                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+                for doc, score in results
+            ])
+            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
 
+        return results
 
-def get_recall_documents(current_query, refined_query, k, user_id):
-    results = search_documents(refined_query, k)
-    if USE_DEBUG:
-        results_info = "\n********************\n".join([
-            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-            for doc, score in results
-        ])
-        logger.info(f"==========\nFor the refined_query: '{refined_query}', '{user_id}', the recall results is\n{results_info}\n==========")
+    with ThreadPoolExecutor() as executor:
+        future_ret1 = executor.submit(search_documents, current_query, k)
+        future_ret2 = executor.submit(search_documents, refined_query, k)
 
-    return results
+        ret1 = filter_documents(future_ret1.result(), min_relevance_score)
+        ret2 = filter_documents(future_ret2.result(), min_relevance_score)
 
-    #if not USE_RERANKING:
-    #    if not refined_query:
-    #        logger.warning(f"refined_query is empty!")
+        if USE_DEBUG:
+            results_info1 = "\n********************\n".join([
+                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+                for doc, score in ret1
+            ])
+            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info1}\n==========")
 
-    #    results = search_documents(current_query, k)
-    #    if USE_DEBUG:
-    #        results_info = "\n********************\n".join([
-    #            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-    #            for doc, score in results
-    #        ])
-    #        logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
+            results_info2 = "\n********************\n".join([
+                f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
+                for doc, score in ret2
+            ])
+            logger.info(f"==========\nFor the refined_query: '{refined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
 
-    #    return results
+        ret = ret1 + ret2
+        results = []
+        source_id_set = set()
+        for doc, chroma_score in ret:
+            source_id = doc.metadata["id"]
+            if source_id not in source_id_set:
+                source_id_set.add(source_id)
+                results.append((doc, chroma_score))
+            else:
+                logger.warning(f"source_id: '{source_id}' is already existed!")
 
-    #with ThreadPoolExecutor() as executor:
-    #    future_ret1 = executor.submit(search_documents, current_query, k)
-    #    future_ret2 = executor.submit(search_documents, refined_query, k)
-
-    #    if USE_RERANKING:
-    #        ret1 = future_ret1.result()[:RECALL_TOP_K]
-    #        ret2 = future_ret2.result()[:RECALL_TOP_K]
-    #    else:
-    #        ret1 = future_ret1.result()
-    #        ret2 = future_ret2.result()
-
-    #    if USE_DEBUG:
-    #        results_info1 = "\n********************\n".join([
-    #            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-    #            for doc, score in ret1
-    #        ])
-    #        logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info1}\n==========")
-
-    #        results_info2 = "\n********************\n".join([
-    #            f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
-    #            for doc, score in ret2
-    #        ])
-    #        logger.info(f"==========\nFor the refined_query: '{refined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
-
-    #combined_results = ret1 + ret2
-    #return combined_results
+        return results
 
 
 def generate_answer(query: str, user_id: str, is_streaming: bool = False):
@@ -220,14 +208,14 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
     lang = detect_query_lang(query)
     logger.warning(f"For query: '{query}', detect the language is '{lang}'!")
 
+    history_context = f"""Human: Hello
+Assistant: I'm here to assist you with information related to `{bot_topic}`. If you have any specific questions about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."""
     # Get the history session from the cache
     history_session = get_user_query_history(user_id, is_streaming)
-    history_context = ''
     if history_session:
         # Build the history context, showing user's historical queries and answers
-        #history_context = "\n--------------------\n".join([
-        history_context = "\n".join([
-            f"Human: {item['query']}\nAssistant: {item['answer']}"
+        history_context = "\n--------------------\n".join([
+            f"**Human:** {item['query']}\n**Assistant:** {item['answer']}"
             for item in history_session
         ])
 
@@ -241,28 +229,26 @@ def generate_answer(query: str, user_id: str, is_streaming: bool = False):
     else:
         top_k = RECALL_TOP_K
 
-    results = get_recall_documents(query, adjust_query, top_k, user_id)
+    results = get_recall_documents(query, adjust_query, top_k, user_id, MIN_RELEVANCE_SCORE)
 
     filter_context = ''
     # Build the context with filtered documents, showing relevant documents
     if USE_RERANKING and results:
         # Rerank the documents
-        rerank_results = rerank_documents(adjust_query, results)
-        filter_rerank_results = filter_rerank_documents(rerank_results, MIN_RELEVANCE_SCORE)
-        if filter_rerank_results:
+        rerank_results = rerank_documents(query, results)
+        if rerank_results:
             filter_context = "\n--------------------\n".join([
-                f"`Citation URL`: {doc['metadata']['source']}\nDocument: {doc['text']}"
-                for doc in filter_rerank_results[:RECALL_TOP_K]
+                f"Citation URL: {doc['metadata']['source']}\nDocument Content: {doc['text']}"
+                for doc in rerank_results[:RECALL_TOP_K]
             ])
     else:
-        if len(results) > top_k:
+        if len(results) > 1:
             results.sort(key=lambda x: x[1], reverse=True)
 
-        filter_results = filter_documents(results, MIN_RELEVANCE_SCORE)
-        if filter_results:
+        if results:
             filter_context = "\n--------------------\n".join([
-                f"`Citation URL`: {doc.metadata['source']}\nDocument: {doc.page_content}"
-                for doc, score in filter_results[:RECALL_TOP_K]
+                f"Citation URL: {doc.metadata['source']}\nDocument Content: {doc.page_content}"
+                for doc, score in results[:RECALL_TOP_K]
             ])
 
     if filter_context:
@@ -277,7 +263,7 @@ Documents Information:
         fallback_answer = f"""No documents found directly related to the current question!
 Please provide the response in the following format and ensure that the 'answer' part is translated into the same language as the user's question:
 
-"I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
+"I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific questions about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
 
 Please ensure:
 - If the user's question is a straightforward greeting, the assistant will offer a friendly standard response, guiding users to seek information or services related to `{bot_topic}`. Don't start with "I'm sorry, I cannot find a specific answer about '{query}' from the information provided.".
@@ -309,7 +295,7 @@ If the user's question is a straightforward greeting, the assistant will offer a
 
 Base on the Chat History and the provided context. First, analyze the provided context information without assuming prior knowledge. Identify all relevant aspects of knowledge contained within. Then, from various perspectives and angles, answer questions as thoroughly and comprehensively as possible to better address and resolve the user's question. If the question is not related to the provided context, the user is informed that no relevant answer can be provided.
 
-**Question:** {adjust_query}
+**Question:** {query}
 
 **Context for Answering the Question:**
 {context}
@@ -373,35 +359,6 @@ def check_smart_query(f):
             logger.error(f"Cache exception {e} for user_id: '{user_id}' and query: '{query}'")
         return f(*args, **kwargs)
     return decorated_function
-
-
-#def postprocess_llm_response(query: str, answer_json: Dict[str, Any], bot_topic: str, recall_domain_set: set[str]) -> bool:
-#    if answer_json['source']:
-#        answer_json['source'] = list(dict.fromkeys(answer_json['source']))
-#
-#    is_adjusted = False
-#    adjust_source = []
-#    for url in answer_json['source']:
-#        domain = urlparse(url).netloc
-#        if domain in recall_domain_set:
-#            adjust_source.append(url)
-#        else:
-#            logger.warning(f"The domain of url: '{url}' is '{domain}', it is not in {recall_domain_set}, it should not be returned!")
-#            if not is_adjusted:
-#                is_adjusted = True
-#
-#    if is_adjusted:
-#        answer_json['source'] = adjust_source
-#        logger.warning(f"adjust_source:{adjust_source}")
-#
-#    if not adjust_source:
-#        if bot_topic not in answer_json['answer']:
-#            adjust_answer = f"I'm sorry, I cannot find a specific answer about '{query}' from the information provided. I'm here to assist you with information related to `{bot_topic}`. If you have any specific queries about our services or need help, feel free to ask, and I'll do my best to provide you with accurate and relevant answers."
-#            logger.warning(f"adjust_answer:'{adjust_answer}'")
-#            if not is_adjusted:
-#                is_adjusted = True
-#            answer_json['answer'] = adjust_answer
-#    return is_adjusted
 
 
 @queries_bp.route('/smart_query', methods=['POST'])
