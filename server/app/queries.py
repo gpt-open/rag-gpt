@@ -15,7 +15,7 @@ from server.app.utils.diskcache_client import diskcache_client
 from server.app.utils.diskcache_lock import diskcache_lock
 from server.logger.logger_config import my_logger as logger
 from server.rag.generation.llm import llm_generator
-from server.rag.pre_retrieval.query_transformation.rewrite import query_rewrite, detect_query_lang
+from server.rag.pre_retrieval.query_transformation.rewrite import detect_query_lang
 from server.rag.post_retrieval.rerank.flash_ranker import RerankRequest, reranker
 from server.rag.retrieval.vector_search import vector_search
 
@@ -81,12 +81,11 @@ def save_user_query_history(user_id: str, query: str, answer: str, is_streaming:
             conn.close()
 
 
-def preprocess_query(query: str, bot_topic: str, history_context: str) -> str:
-    return query_rewrite(query, bot_topic, history_contxt)
-
-
 def refine_query(query: str, history_context: str, lang: str) -> str:
-    prompt = f"""Given a conversation (between Human and Assistant) and a follow up message from Human, using the prior knowledge relationships, rewrite the message to be a standalone and detailed question (Note: The language should be consistent with the follow up message from Human; for instance, reply in Chinese if the question was asked in Chinese and in English if it was asked in English!) that captures all relevant context from the conversation.
+    prompt = f"""Given a conversation (between Human and Assistant) and a follow up message from Human, using the prior knowledge relationships, rewrite the message to be a standalone and detailed question that captures all relevant context from the conversation. Ensure the rewritten question:
+1. Preserves the original intent of the follow-up message.
+2. Is not excessively long and avoids including full historical responses unless absolutely necessary.
+3. Maintains the same language as the follow-up message (e.g., reply in Chinese if the question was asked in Chinese and in English if it was asked in English).
 
 Chat History (Sorted by request time from most recent to oldest):
 {history_context}
