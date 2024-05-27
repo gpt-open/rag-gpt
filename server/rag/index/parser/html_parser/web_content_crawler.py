@@ -67,6 +67,11 @@ class AsyncCrawlerSiteContent:
         try:
             # Use BeautifulSoup to parse HTML content
             soup = BeautifulSoup(html_text, 'html.parser')
+
+            # Remove all the tags that are not meaningful for the extraction.
+            SCAPE_TAGS = ["nav", "footer", "aside", "script", "style"]
+            [tag.decompose() for tag in soup.find_all(SCAPE_TAGS)]
+
             body_content = soup.find('body')
 
             # Create an html2text converter
