@@ -84,8 +84,10 @@ def save_user_query_history(user_id: str, query: str, answer: str, is_streaming:
 def refine_query(query: str, history_context: str, lang: str) -> str:
     prompt = f"""Given a conversation (between Human and Assistant) and a follow up message from Human, using the prior knowledge relationships, rewrite the message to be a standalone and detailed question that captures all relevant context from the conversation. Ensure the rewritten question:
 1. Preserves the original intent of the follow-up message.
-2. Is not excessively long and avoids including full historical responses unless absolutely necessary.
-3. Maintains the same language as the follow-up message (e.g., reply in Chinese if the question was asked in Chinese and in English if it was asked in English).
+2. If the true intent of the follow-up message cannot be determined, make no modifications to avoid generating an incorrect question.
+3. The length of the rewritten question should not increase significantly compared to the follow-up message, to avoid altering the original intent.
+4. Do not directly use the content of the Assistant's responses to form the rewritten question. Prioritize referring to the information of the Human's historical question.
+5. Maintains the same language as the follow-up message (e.g., reply in Chinese if the question was asked in Chinese and in English if it was asked in English).
 
 Chat History (Sorted by request time from most recent to oldest):
 {history_context}
