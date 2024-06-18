@@ -88,6 +88,8 @@ URL_PREFIX="http://127.0.0.1:7000/"
 USE_PREPROCESS_QUERY=1
 USE_RERANKING=1
 USE_DEBUG=0
+USE_LLAMA_PARSE=0
+LLAMA_CLOUD_API_KEY="xxxx"
 ```
 
 - Don't modify **`LLM_NAME`**
@@ -111,18 +113,20 @@ The variables in .env
 ```shell
 LLM_NAME="ZhipuAI"
 ZHIPUAI_API_KEY="xxxx"
-GLM_MODEL_NAME="glm-3-turbo"
+GLM_MODEL_NAME="glm-4-air"
 MIN_RELEVANCE_SCORE=0.4
 BOT_TOPIC="xxxx"
 URL_PREFIX="http://127.0.0.1:7000/"
 USE_PREPROCESS_QUERY=1
 USE_RERANKING=1
 USE_DEBUG=0
+USE_LLAMA_PARSE=0
+LLAMA_CLOUD_API_KEY="xxxx"
 ```
 
 - Don't modify **`LLM_NAME`**
 - Modify the **`ZHIPUAI_API_KEY`** with your own key. Please log in to the [ZhipuAI website](https://open.bigmodel.cn/usercenter/apikeys) to view your API Key.
-- Update the **`GLM_MODEL_NAME`** setting, replacing `glm-3-turbo` with `glm-4` if you want to use GLM-4.
+- Update the **`GLM_MODEL_NAME`** setting, the model list is `['glm-3-turbo', 'glm-4', 'glm-4-0520', 'glm-4-air', 'glm-4-airx', 'glm-4-flash']`.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
@@ -152,6 +156,8 @@ URL_PREFIX="http://127.0.0.1:7000/"
 USE_PREPROCESS_QUERY=1
 USE_RERANKING=1
 USE_DEBUG=0
+USE_LLAMA_PARSE=0
+LLAMA_CLOUD_API_KEY="xxxx"
 ```
 
 - Don't modify **`LLM_NAME`**
@@ -187,6 +193,8 @@ URL_PREFIX="http://127.0.0.1:7000/"
 USE_PREPROCESS_QUERY=1
 USE_RERANKING=1
 USE_DEBUG=0
+USE_LLAMA_PARSE=0
+LLAMA_CLOUD_API_KEY="xxxx"
 ```
 
 - Don't modify **`LLM_NAME`**

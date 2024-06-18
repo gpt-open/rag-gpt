@@ -23,7 +23,7 @@ class AsyncHtmlLoader:
                 content = h.handle(str(body_content))
 
             if not content:
-                logger.warnning(f"file_path: '{self.file_path}' is empty!")
+                logger.warning(f"file_path: '{self.file_path}' is empty!")
             return content
         except Exception as e:
             logger.error(f"get_content is failed, exception: {e}")

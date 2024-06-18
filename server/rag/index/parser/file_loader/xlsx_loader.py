@@ -1,6 +1,10 @@
+import os
+from llama_parse import LlamaParse
 import pandas as pd
-from tabulate import tabulate
 from server.logger.logger_config import my_logger as logger
+
+USE_LLAMA_PARSE = int(os.getenv('USE_LLAMA_PARSE'))
+LLAMA_CLOUD_API_KEY = os.getenv('LLAMA_CLOUD_API_KEY')
 
 
 class AsyncXlsxLoader:
@@ -12,31 +16,48 @@ class AsyncXlsxLoader:
         try:
             content = ''
 
-            # Load all sheets from the Excel file
-            sheets_dict = pd.read_excel(self.file_path, sheet_name=None)
-            # This will hold the markdown content for all sheets
-            markdown_content = []
+            if USE_LLAMA_PARSE:
+                parser = LlamaParse(
+                    api_key=LLAMA_CLOUD_API_KEY,
+                    result_type="markdown",
+                )
 
-            # Load all sheets from the Excel file
-            sheets_dict = pd.read_excel(self.file_path, sheet_name=None)
-            # This will hold the markdown content for all sheets
-            markdown_content = []
+                text_vec = []
 
-            # Process each sheet in the workbook
-            for sheet_name, df in sheets_dict.items():
-                # Add a header for each sheet in the Markdown output
-                markdown_content.append(f"# {sheet_name}\n")
+                import nest_asyncio
+                nest_asyncio.apply()
 
-                # Convert the DataFrame to a Markdown string using DataFrame.to_markdown()
-                markdown_str = df.to_markdown(index=False)
-                markdown_content.append(markdown_str)
-                markdown_content.append("\n")  # Add a newline for spacing between sheets
-   
-            if markdown_content:
-                content = "\n".join(markdown_content)
+                documents = parser.load_data(self.file_path)
+                for doc in documents:
+                    text_vec.append(doc.text)
+                content = "\n\n".join(text_vec)
+            else:
+                # Load all sheets from the Excel file
+                sheets_dict = pd.read_excel(self.file_path, sheet_name=None)
+                # This will hold the markdown content for all sheets
+                markdown_content = []
 
-            if not content:
-                logger.warnning(f"file_path: '{self.file_path}' is empty!")
+                # Load all sheets from the Excel file
+                sheets_dict = pd.read_excel(self.file_path, sheet_name=None)
+                # This will hold the markdown content for all sheets
+                markdown_content = []
+
+                # Process each sheet in the workbook
+                for sheet_name, df in sheets_dict.items():
+                    # Add a header for each sheet in the Markdown output
+                    markdown_content.append(f"# {sheet_name}\n")
+
+                    # Convert the DataFrame to a Markdown string using DataFrame.to_markdown()
+                    markdown_str = df.to_markdown(index=False)
+                    markdown_content.append(markdown_str)
+                    # Add a newline for spacing between sheets
+                    markdown_content.append("\n")
+
+                if markdown_content:
+                    content = "\n".join(markdown_content)
+
+                if not content:
+                    logger.wanning(f"file_path: '{self.file_path}' is empty!")
             return content
         except Exception as e:
             logger.error(f"get_content is failed, exception: {e}")
