@@ -1,6 +1,6 @@
 LLM_NAME="ZhipuAI"
 ZHIPUAI_API_KEY="xxxx"
-GLM_MODEL_NAME="glm-3-turbo"
+GLM_MODEL_NAME="glm-4-air"
 MIN_RELEVANCE_SCORE=0.4
 BOT_TOPIC="xxxx"
 URL_PREFIX="http://127.0.0.1:7000/"
