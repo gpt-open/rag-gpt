@@ -54,7 +54,8 @@ class ExcelTableProcessor:
                     formatted_value = f"(${abs(value):,.0f})"
                 else:  # Assuming zero or other cases
                     formatted_value = f"$ -"
-                formatted_value = f"{formatted_value:>15}"  # Align right within 15 character width
+                # Align right within 15 character width
+                formatted_value = f"{formatted_value:>15}"
             elif cell.number_format == '0%':
                 formatted_value = f"{value:.0%}"
             elif cell.number_format == '0.0%':
@@ -81,30 +82,39 @@ class ExcelTableProcessor:
 
     def is_first_header_cell(self, cell: Cell) -> bool:
         """Check if a cell meets the first header characteristics."""
-        return self.has_required_left_border(cell) and self.has_required_top_border(cell)
+        return self.has_required_left_border(
+            cell) and self.has_required_top_border(cell)
 
-    def find_table(self, sheet: Worksheet, start_row: int, start_col: int) -> Tuple[int, int, int, int]:
+    def find_table(self, sheet: Worksheet, start_row: int,
+                   start_col: int) -> Tuple[int, int, int, int]:
         """Identify the width and height of the table starting from a header cell."""
         max_row = sheet.max_row
         max_col = sheet.max_column
 
         # Identify table width
         n = 1
-        while start_col + n <= max_col and self.has_required_top_border(sheet.cell(row=start_row, column=start_col + n)):
+        while start_col + n <= max_col and self.has_required_top_border(
+                sheet.cell(row=start_row, column=start_col + n)):
             n += 1
 
         # Identify table height
         m = 1
-        while start_row + m <= max_row and self.has_required_left_border(sheet.cell(row=start_row + m, column=start_col)):
+        while start_row + m <= max_row and self.has_required_left_border(
+                sheet.cell(row=start_row + m, column=start_col)):
             m += 1
 
         return (start_row, start_col, start_row + m - 1, start_col + n - 1)
 
-    def convert_table_to_markdown(self, sheet: Worksheet, table_range: Tuple[int, int, int, int]) -> str:
+    def convert_table_to_markdown(
+            self, sheet: Worksheet, table_range: Tuple[int, int, int,
+                                                       int]) -> str:
         """Convert the specified range of cells into a Markdown formatted table."""
         data = []
         for r in range(table_range[0], table_range[2] + 1):
-            row_data = [self.format_cell_value(sheet.cell(row=r, column=c)) for c in range(table_range[1], table_range[3] + 1)]
+            row_data = [
+                self.format_cell_value(sheet.cell(row=r, column=c))
+                for c in range(table_range[1], table_range[3] + 1)
+            ]
             data.append(row_data)
 
         df = pd.DataFrame(data[1:], columns=data[0])
@@ -121,9 +131,12 @@ class ExcelTableProcessor:
         for row in range(1, max_row + 1):
             for col in range(1, max_col + 1):
                 cell = sheet.cell(row=row, column=col)
-                if (row, col) not in processed_cells and self.is_first_header_cell(cell):
+                if (
+                        row, col
+                ) not in processed_cells and self.is_first_header_cell(cell):
                     table_range = self.find_table(sheet, row, col)
-                    markdown_tables.append(self.convert_table_to_markdown(sheet, table_range))
+                    markdown_tables.append(
+                        self.convert_table_to_markdown(sheet, table_range))
                     # Mark cells as processed
                     for r in range(table_range[0], table_range[2] + 1):
                         for c in range(table_range[1], table_range[3] + 1):

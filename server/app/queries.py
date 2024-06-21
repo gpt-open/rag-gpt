@@ -19,7 +19,6 @@ from server.rag.pre_retrieval.query_transformation.rewrite import detect_query_l
 from server.rag.post_retrieval.rerank.flash_ranker import RerankRequest, reranker
 from server.rag.retrieval.vector_search import vector_search
 
-
 LLM_NAME = os.getenv('LLM_NAME')
 
 MIN_RELEVANCE_SCORE = float(os.getenv('MIN_RELEVANCE_SCORE', '0.3'))
@@ -27,7 +26,6 @@ BOT_TOPIC = os.getenv('BOT_TOPIC')
 USE_PREPROCESS_QUERY = int(os.getenv('USE_PREPROCESS_QUERY'))
 USE_RERANKING = int(os.getenv('USE_RERANKING'))
 USE_DEBUG = int(os.getenv('USE_DEBUG'))
-
 
 queries_bp = Blueprint('queries', __name__, url_prefix='/open_kf_api/queries')
 
@@ -42,7 +40,8 @@ def get_user_query_history(user_id: str, is_streaming: bool) -> List[Any]:
     return history
 
 
-def save_user_query_history(user_id: str, query: str, answer: str, is_streaming: bool) -> None:
+def save_user_query_history(user_id: str, query: str, answer: str,
+                            is_streaming: bool) -> None:
     try:
         # After generating the response from LLM
         # Store user query and LLM response in Cache
@@ -53,9 +52,14 @@ def save_user_query_history(user_id: str, query: str, answer: str, is_streaming:
             history_key = f"open_kf:query_history:{user_id}"
             answer_json = json.loads(answer)
             history_data = {'query': query, 'answer': answer_json}
-        diskcache_client.append_to_list(history_key, json.dumps(history_data), ttl=SESSION_EXPIRE_TIME, max_length=MAX_HISTORY_SESSION_LENGTH)
+        diskcache_client.append_to_list(history_key,
+                                        json.dumps(history_data),
+                                        ttl=SESSION_EXPIRE_TIME,
+                                        max_length=MAX_HISTORY_SESSION_LENGTH)
     except Exception as e:
-        logger.error(f"For the query: '{query}' and user_id: '{user_id}', is processed failed with Cache, the exception is {e}")
+        logger.error(
+            f"For the query: '{query}' and user_id: '{user_id}', is processed failed with Cache, the exception is {e}"
+        )
 
     timestamp = int(time.time())
     conn = None
@@ -65,17 +69,27 @@ def save_user_query_history(user_id: str, query: str, answer: str, is_streaming:
         try:
             with diskcache_lock.lock():
                 if is_streaming:
-                    conn.execute('INSERT INTO t_user_qa_record_tab (user_id, query, answer, source, ctime, mtime) VALUES (?, ?, ?, ?, ?, ?)',
-                             (user_id, query, answer, '[]', timestamp, timestamp))
+                    conn.execute(
+                        'INSERT INTO t_user_qa_record_tab (user_id, query, answer, source, ctime, mtime) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, query, answer, '[]', timestamp, timestamp))
                 else:
-                    conn.execute('INSERT INTO t_user_qa_record_tab (user_id, query, answer, source, ctime, mtime) VALUES (?, ?, ?, ?, ?, ?)',
-                             (user_id, query, answer_json["answer"], json.dumps(answer_json["source"]), timestamp, timestamp))
+                    conn.execute(
+                        'INSERT INTO t_user_qa_record_tab (user_id, query, answer, source, ctime, mtime) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, query, answer_json["answer"],
+                         json.dumps(
+                             answer_json["source"]), timestamp, timestamp))
                 conn.commit()
         except Exception as e:
             logger.error(f"process discache_lock exception:{e}")
-            return {'retcode': -30000, 'message': f'An error occurred: {e}', 'data': {}}
+            return {
+                'retcode': -30000,
+                'message': f'An error occurred: {e}',
+                'data': {}
+            }
     except Exception as e:
-        logger.error(f"For the query: '{query}' and user_id: '{user_id}', is processed failed with Database, the exception is {e}")
+        logger.error(
+            f"For the query: '{query}' and user_id: '{user_id}', is processed failed with Database, the exception is {e}"
+        )
     finally:
         if conn:
             conn.close()
@@ -102,9 +116,13 @@ Refined Standalone Question:"""
     response = llm_generator.generate(prompt, False, False)
     timecost = time.time() - beg_time
     adjust_query = response.choices[0].message.content
-    logger.warning(f"For the query: '{query}', the refined query is '{adjust_query}'. The timecost is {timecost}")
+    logger.warning(
+        f"For the query: '{query}', the refined query is '{adjust_query}'. The timecost is {timecost}"
+    )
     if hasattr(response, 'usage'):
-        logger.warning(f"[Track token consumption] for refine_query: '{query}', usage={response.usage}")
+        logger.warning(
+            f"[Track token consumption] for refine_query: '{query}', usage={response.usage}"
+        )
     return adjust_query
 
 
@@ -112,11 +130,15 @@ def search_documents(query: str, k: int) -> List[Tuple[Document, float]]:
     beg_time = time.time()
     results = vector_search.similarity_search_with_relevance_scores(query, k)
     timecost = time.time() - beg_time
-    logger.warning(f"search_documents, query: '{query}', k: {k}, the timecost is {timecost}")
+    logger.warning(
+        f"search_documents, query: '{query}', k: {k}, the timecost is {timecost}"
+    )
     return results
 
 
-def rerank_documents(query: str, results: List[Tuple[Document, float]]) -> List[Dict[str, Any]]:
+def rerank_documents(
+        query: str, results: List[Tuple[Document,
+                                        float]]) -> List[Dict[str, Any]]:
     passages: List[Dict[str, Any]] = []
     index = 1
     for doc, chroma_score in results:
@@ -135,19 +157,25 @@ def rerank_documents(query: str, results: List[Tuple[Document, float]]) -> List[
         rerankrequest = RerankRequest(query=query, passages=passages)
         rerank_results = reranker.rerank(rerankrequest)
         timecost = time.time() - beg_time
-        logger.warning(f"For the query: '{query}', rerank_documents, the timecost is {timecost}")
+        logger.warning(
+            f"For the query: '{query}', rerank_documents, the timecost is {timecost}"
+        )
 
     if USE_DEBUG:
         rerank_info = "\n--------------------\n".join([
             f"ID: {item['id']}\nTEXT: {item['text']}\nMETADATA: {item['metadata']}\nCHROME_SCORE: {item['chroma_score']}\nSCORE: {item['score']}"
             for item in rerank_results
         ])
-        logger.info(f"==========\nFor the query: '{query}', the rerank results is:\n{rerank_info}\n==========")
+        logger.info(
+            f"==========\nFor the query: '{query}', the rerank results is:\n{rerank_info}\n=========="
+        )
 
     return rerank_results
 
 
-def filter_documents(results: List[Tuple[Document, float]], min_relevance_score: float) -> List[Tuple[Document, float]]:
+def filter_documents(
+        results: List[Tuple[Document, float]],
+        min_relevance_score: float) -> List[Tuple[Document, float]]:
     filter_results = []
     for doc, score in results:
         if score >= min_relevance_score:
@@ -155,7 +183,9 @@ def filter_documents(results: List[Tuple[Document, float]], min_relevance_score:
     return filter_results
 
 
-def get_recall_documents(current_query, refined_query, k, user_id, min_relevance_score: float) -> List[Tuple[Document, float]]:
+def get_recall_documents(
+        current_query, refined_query, k, user_id,
+        min_relevance_score: float) -> List[Tuple[Document, float]]:
     if current_query == refined_query:
         ret = search_documents(current_query, k)
         results = filter_documents(ret, min_relevance_score)
@@ -164,7 +194,9 @@ def get_recall_documents(current_query, refined_query, k, user_id, min_relevance
                 f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
                 for doc, score in results
             ])
-            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n==========")
+            logger.info(
+                f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info}\n=========="
+            )
 
         return results
 
@@ -180,13 +212,17 @@ def get_recall_documents(current_query, refined_query, k, user_id, min_relevance
                 f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
                 for doc, score in ret1
             ])
-            logger.info(f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info1}\n==========")
+            logger.info(
+                f"==========\nFor the current_query: '{current_query}', '{user_id}', the recall results is\n{results_info1}\n=========="
+            )
 
             results_info2 = "\n********************\n".join([
                 f"URL: {doc.metadata['source']}\nscore: {score}\npage_content: {doc.page_content}"
                 for doc, score in ret2
             ])
-            logger.info(f"==========\nFor the refined_query: '{refined_query}', '{user_id}', the recall results is\n{results_info2}\n==========")
+            logger.info(
+                f"==========\nFor the refined_query: '{refined_query}', '{user_id}', the recall results is\n{results_info2}\n=========="
+            )
 
         ret = ret1 + ret2
         results = []
@@ -230,7 +266,8 @@ Assistant: I'm here to assist you with information related to `{bot_topic}`. If 
     else:
         top_k = RECALL_TOP_K
 
-    results = get_recall_documents(query, adjust_query, top_k, user_id, MIN_RELEVANCE_SCORE)
+    results = get_recall_documents(query, adjust_query, top_k, user_id,
+                                   MIN_RELEVANCE_SCORE)
 
     filter_context = ''
     # Build the context with filtered documents, showing relevant documents
@@ -333,7 +370,7 @@ The answer must be fully formatted using Markdown syntax. This includes:
         is_json = True
     response = llm_generator.generate(prompt, is_streaming, is_json)
     return response
-    
+
 
 def check_smart_query(f):
     @wraps(f)
@@ -343,8 +380,12 @@ def check_smart_query(f):
         query = data.get('query')
         if not user_id or not query:
             logger.error(f"user_id and query are required")
-            return {'retcode': -20000, 'message': 'user_id and query are required', 'data': {}}, 400
-        
+            return {
+                'retcode': -20000,
+                'message': 'user_id and query are required',
+                'data': {}
+            }, 400
+
         request.user_id = user_id
         request.query = query
         request.intervene_data = None
@@ -354,11 +395,16 @@ def check_smart_query(f):
             key = f"open_kf:intervene:{query}"
             intervene_data = diskcache_client.get(key)
             if intervene_data:
-                logger.info(f"For the query: '{query}' and user_id: '{user_id}', is hit in Cache, the intervene_data is {intervene_data}")
+                logger.info(
+                    f"For the query: '{query}' and user_id: '{user_id}', is hit in Cache, the intervene_data is {intervene_data}"
+                )
                 request.intervene_data = intervene_data
         except Exception as e:
-            logger.error(f"Cache exception {e} for user_id: '{user_id}' and query: '{query}'")
+            logger.error(
+                f"Cache exception {e} for user_id: '{user_id}' and query: '{query}'"
+            )
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -372,9 +418,14 @@ def smart_query():
         intervene_data = request.intervene_data
         if intervene_data:
             # Start a new thread to execute saving history records asynchronously
-            Thread(target=save_user_query_history, args=(user_id, query, intervene_data, False)).start()
+            Thread(target=save_user_query_history,
+                   args=(user_id, query, intervene_data, False)).start()
             intervene_data_json = json.loads(intervene_data)
-            return {"retcode": 0, "message": "success", "data": intervene_data_json}
+            return {
+                "retcode": 0,
+                "message": "success",
+                "data": intervene_data_json
+            }
 
         if len(query) > MAX_QUERY_LENGTH:
             query = query[:MAX_QUERY_LENGTH]
@@ -382,7 +433,9 @@ def smart_query():
         beg_time = time.time()
         response = generate_answer(query, user_id, False)
         if hasattr(response, 'usage'):
-            logger.warning(f"[Track token consumption] for smart_query: '{query}', usage={response.usage}")
+            logger.warning(
+                f"[Track token consumption] for smart_query: '{query}', usage={response.usage}"
+            )
         answer = response.choices[0].message.content
 
         #logger.warning(f"The answer is:\n{answer}")
@@ -398,13 +451,18 @@ def smart_query():
         timecost = time.time() - beg_time
         answer_json = json.loads(answer)
         answer_json["source"] = list(dict.fromkeys(answer_json["source"]))
-        logger.success(f"For smart_query, query: '{query}' and user_id: '{user_id}', is processed successfully, the answer is:\n{answer}\nthe total timecost is {timecost}\n")
+        logger.success(
+            f"For smart_query, query: '{query}' and user_id: '{user_id}', is processed successfully, the answer is:\n{answer}\nthe total timecost is {timecost}\n"
+        )
 
         # Start another new thread to execute saving history records asynchronously
-        Thread(target=save_user_query_history, args=(user_id, query, answer, False)).start()
+        Thread(target=save_user_query_history,
+               args=(user_id, query, answer, False)).start()
         return {"retcode": 0, "message": "success", "data": answer_json}
     except Exception as e:
-        logger.error(f"For the query: '{query}' and user_id: '{user_id}', is processed failed, the exception is {e}")
+        logger.error(
+            f"For the query: '{query}' and user_id: '{user_id}', is processed failed, the exception is {e}"
+        )
         return {'retcode': -20001, 'message': str(e), 'data': {}}
 
 
@@ -427,7 +485,10 @@ def smart_query_stream():
 
             def generate_intervene():
                 yield intervene_data
-            return Response(generate_intervene(), mimetype="text/event-stream", headers=headers)
+
+            return Response(generate_intervene(),
+                            mimetype="text/event-stream",
+                            headers=headers)
 
         if len(query) > MAX_QUERY_LENGTH:
             query = query[:MAX_QUERY_LENGTH]
@@ -445,15 +506,25 @@ def smart_query_stream():
                     yield content
 
                 if hasattr(chunk, 'usage'):
-                    logger.warning(f"[Track token consumption of streaming] for smart_query_stream: '{query}', usage={chunk.usage}")
+                    if chunk.usage:
+                        logger.warning(
+                            f"[Track token consumption of streaming] for smart_query_stream: '{query}', usage={chunk.usage}"
+                        )
             # After the streaming response is complete, save to Cache and SQLite
             answer = ''.join(answer_chunks)
             timecost = time.time() - beg_time
-            logger.success(f"query: '{query}' and user_id: '{user_id}' is processed successfully, the answer is:\n{answer}\nthe total timecost is {timecost}\n")
+            logger.success(
+                f"query: '{query}' and user_id: '{user_id}' is processed successfully, the answer is:\n{answer}\nthe total timecost is {timecost}\n"
+            )
             save_user_query_history(user_id, query, answer, True)
-        return Response(generate_llm(), mimetype="text/event-stream", headers=headers)
+
+        return Response(generate_llm(),
+                        mimetype="text/event-stream",
+                        headers=headers)
     except Exception as e:
-        logger.error(f"query: '{query}' and user_id: '{user_id}' is processed failed, the exception is {e}")
+        logger.error(
+            f"query: '{query}' and user_id: '{user_id}' is processed failed, the exception is {e}"
+        )
         return {'retcode': -30000, 'message': str(e), 'data': {}}
 
 
@@ -470,11 +541,21 @@ def get_user_conversation_list():
     if None in ([start_timestamp, end_timestamp, page, page_size]):
         return {'retcode': -20000, 'message': 'Missing required parameters'}
 
-    if not isinstance(start_timestamp, int) or not isinstance(end_timestamp, int):
-        return {'retcode': -20001, 'message': 'Invalid start_timestamp or end_timestamp parameters', 'data': {}}
+    if not isinstance(start_timestamp, int) or not isinstance(
+            end_timestamp, int):
+        return {
+            'retcode': -20001,
+            'message': 'Invalid start_timestamp or end_timestamp parameters',
+            'data': {}
+        }
 
-    if not isinstance(page, int) or not isinstance(page_size, int) or page < 1 or page_size < 1:
-        return {'retcode': -20001, 'message': 'Invalid page or page_size parameters', 'data': {}}
+    if not isinstance(page, int) or not isinstance(
+            page_size, int) or page < 1 or page_size < 1:
+        return {
+            'retcode': -20001,
+            'message': 'Invalid page or page_size parameters',
+            'data': {}
+        }
 
     conn = get_db_connection()
     try:
@@ -482,14 +563,16 @@ def get_user_conversation_list():
         offset = (page - 1) * page_size
 
         # First, get the total count of distinct user_ids within the time range for pagination
-        cur.execute("""
+        cur.execute(
+            """
             SELECT COUNT(DISTINCT user_id) AS total_count FROM t_user_qa_record_tab
             WHERE ctime BETWEEN ? AND ?
         """, (start_timestamp, end_timestamp))
         total_count = cur.fetchone()['total_count']
 
         # Then, fetch the most recent conversation record for each distinct user within the time range
-        cur.execute('''
+        cur.execute(
+            '''
             SELECT t.* FROM t_user_qa_record_tab t
             INNER JOIN (
                 SELECT user_id, MAX(ctime) AS max_ctime
@@ -511,7 +594,14 @@ def get_user_conversation_list():
             }
         } for row in cur.fetchall()]
 
-        return {'retcode': 0, 'message': 'Success', 'data': {'total_count': total_count, 'conversation_list': conversation_list}}
+        return {
+            'retcode': 0,
+            'message': 'Success',
+            'data': {
+                'total_count': total_count,
+                'conversation_list': conversation_list
+            }
+        }
     except Exception as e:
         logger.error(f"Failed to retrieve user conversation list: {e}")
         return {'retcode': -30000, 'message': 'Internal server error'}
@@ -531,7 +621,11 @@ def get_user_query_history_list():
     # Check for mandatory parameters
     if None in (page, page_size, user_id):
         logger.error("page, page_size and user_id are required")
-        return {'retcode': -20000, 'message': 'page, page_size and user_id are required', 'data': {}}
+        return {
+            'retcode': -20000,
+            'message': 'page, page_size and user_id are required',
+            'data': {}
+        }
 
     try:
         # Convert timestamps and pagination parameters to integers
@@ -551,22 +645,28 @@ def get_user_query_history_list():
         cur = conn.cursor()
 
         # First, query the total count of records under the given conditions
-        cur.execute(f'SELECT COUNT(*) FROM t_user_qa_record_tab {query_conditions}', params)
+        cur.execute(
+            f'SELECT COUNT(*) FROM t_user_qa_record_tab {query_conditions}',
+            params)
         total_count = cur.fetchone()[0]
 
         # Then, query the paginated records
-        cur.execute(f'SELECT * FROM t_user_qa_record_tab {query_conditions} ORDER BY id LIMIT ? OFFSET ?',
-                    params + [page_size, (page-1) * page_size])
+        cur.execute(
+            f'SELECT * FROM t_user_qa_record_tab {query_conditions} ORDER BY id LIMIT ? OFFSET ?',
+            params + [page_size, (page - 1) * page_size])
         rows = cur.fetchall()
 
-        record_list = [dict(row) for row in rows]  # Convert rows to dictionaries
+        # Convert rows to dictionaries
+        record_list = [dict(row) for row in rows]
         # Apply json.loads on the 'source' field of each record
         for record in record_list:
             if 'source' in record:  # Ensure the 'source' key exists
                 try:
-                    record['source'] = json.loads(record['source'])  # Convert JSON string to Python list
+                    # Convert JSON string to Python list
+                    record['source'] = json.loads(record['source'])
                 except json.JSONDecodeError:
-                    record['source'] = []  # If decoding fails, set to an empty list or other default value
+                    # If decoding fails, set to an empty list or other default value
+                    record['source'] = []
 
         return {
             "retcode": 0,

@@ -7,10 +7,9 @@ from server.constant.constants import DISTRIBUTED_LOCK_ID, DISTRIBUTED_LOCK_EXPI
 
 class DiskcacheLock:
     def __init__(self,
-        cache: Cache,
-        lock_id: str,
-        expire_time: int = DISTRIBUTED_LOCK_EXPIRE_TIME
-    ) -> None:
+                 cache: Cache,
+                 lock_id: str,
+                 expire_time: int = DISTRIBUTED_LOCK_EXPIRE_TIME) -> None:
         """
         Initialize the DiskcacheLock with a Diskcache client and an optional expiration time.
 

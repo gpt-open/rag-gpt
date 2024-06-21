@@ -30,11 +30,11 @@ def detect_query_lang(query: str) -> str:
 def query_rewrite(query: str, bot_topic: str) -> str:
     # Detect the language of the query
     lang, _ = langid.classify(query)
-    
+
     # Convert to lowercase for case-insensitive comparison
     query_lower = query.lower()
     bot_topic_lower = bot_topic.lower()
-    
+
     # Check if the bot_topic is already included in the query
     if bot_topic_lower not in query_lower:
         # Using regular expression to remove trailing punctuation if present
@@ -65,9 +65,11 @@ def query_rewrite(query: str, bot_topic: str) -> str:
             adjust_query = f"{query_trimmed}، حول '{bot_topic}'"
         else:
             adjust_query = f"{query_trimmed}, '{bot_topic}'"
-        
+
         # Record the adjusted query
-        logger.warning(f"Detected language: {lang}, Original query: '{query}', Adjusted query: '{adjust_query}'")
+        logger.warning(
+            f"Detected language: {lang}, Original query: '{query}', Adjusted query: '{adjust_query}'"
+        )
         return adjust_query
     else:
         # If the bot_topic is already in the query, log this info and return the original query

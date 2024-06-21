@@ -6,9 +6,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def check_env_variables():
-    # LLM_NAME: Name of the language model being used, should be in ['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek'].
+    # LLM_NAME: Name of the language model being used, should be in ['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek', 'Moonshot'].
     LLM_NAME = os.getenv('LLM_NAME')
-    llm_name_list = ['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek']
+    llm_name_list = ['OpenAI', 'ZhipuAI', 'Ollama', 'DeepSeek', 'Moonshot']
     if LLM_NAME not in llm_name_list:
         logger.error(
             f"LLM_NAME: '{LLM_NAME}' is illegal! Must be in {llm_name_list}.")
@@ -70,7 +70,7 @@ def check_env_variables():
                 f"OLLAMA_BASE_URL: '{OLLAMA_BASE_URL}' is illegal! It must be like 'http://IP:PORT' or 'https://IP:PORT'"
             )
             sys.exit(-1)
-    elif LLM_NAME == 'DEEPSEEK':
+    elif LLM_NAME == 'DeepSeek':
         # ZHIPUAI_API_KEY: API key for accessing ZhipuAI's services.
         ZHIPUAI_API_KEY = os.getenv('ZHIPUAI_API_KEY')
         if ZHIPUAI_API_KEY == 'xxxx':
@@ -88,6 +88,26 @@ def check_env_variables():
         if DEEPSEEK_MODEL_NAME not in ['deepseek-chat', 'deepseek-coder']:
             logger.error(
                 f"DEEPSEEK_MODEL_NAME: '{DEEPSEEK_MODEL_NAME}' is illegal! Must be 'deepseek-chat' or 'deepseek-coder'"
+            )
+            sys.exit(-1)
+    elif LLM_NAME == 'Moonshot':
+        # ZHIPUAI_API_KEY: API key for accessing ZhipuAI's services.
+        ZHIPUAI_API_KEY = os.getenv('ZHIPUAI_API_KEY')
+        if ZHIPUAI_API_KEY == 'xxxx':
+            logger.error(f"ZHIPUAI_API_KEY: '{ZHIPUAI_API_KEY}' is illegal!")
+            sys.exit(-1)
+
+        # MOONSHOT_API_KEY: API key for accessing Moonshot's services.
+        MOONSHOT_API_KEY = os.getenv('MOONSHOT_API_KEY')
+        if MOONSHOT_API_KEY == 'xxxx':
+            logger.error(f"MOONSHOT_API_KEY: '{MOONSHOT_API_KEY}' is illegal!")
+            sys.exit(-1)
+
+        # MOONSHOT_MODEL_NAME: Specific Moonshot model being used, e.g., 'moonshot-v1-8k'.
+        MOONSHOT_MODEL_NAME = os.getenv('MOONSHOT_MODEL_NAME')
+        if MOONSHOT_MODEL_NAME not in ['moonshot-v1-8k']:
+            logger.error(
+                f"MOONSHOT_MODEL_NAME: '{MOONSHOT_MODEL_NAME}' is illegal! Must be 'moonshot-v1-8k'"
             )
             sys.exit(-1)
 

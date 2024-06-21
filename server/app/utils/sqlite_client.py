@@ -11,6 +11,8 @@ def get_db_connection() -> Connection:
         Connection: A connection to the SQLite database.
     """
     conn = sqlite3.connect(f"{SQLITE_DB_DIR}/{SQLITE_DB_NAME}")
-    conn.row_factory = sqlite3.Row              # Set row factory to access columns by name
-    conn.execute("PRAGMA journal_mode=WAL;")    # Enable WAL mode for better concurrency
+    # Set row factory to access columns by name
+    conn.row_factory = sqlite3.Row
+    # Enable WAL mode for better concurrency
+    conn.execute("PRAGMA journal_mode=WAL;")
     return conn

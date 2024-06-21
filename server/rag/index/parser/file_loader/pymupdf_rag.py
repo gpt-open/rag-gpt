@@ -1,7 +1,6 @@
 """
 Source: https://github.com/pymupdf/RAG/blob/main/helpers/pymupdf_rag.py
 """
-
 """
 This script accepts a PDF document filename and converts it to a text file
 in Markdown format, compatible with the GitHub standard.
@@ -41,9 +40,7 @@ License GNU Affero GPL 3.0
 
 import string
 from pprint import pprint
-
 import fitz
-
 if fitz.pymupdf_version_tuple < (1, 24, 0):
     raise NotImplementedError("PyMuPDF version 1.24.0 or later is needed.")
 
@@ -58,7 +55,6 @@ def to_markdown(doc: fitz.Document, pages: list = None) -> str:
 
     class IdentifyHeaders:
         """Compute data for identifying header text."""
-
         def __init__(self, doc, pages: list = None, body_limit: float = None):
             """Read all text and make a dictionary of fontsizes.
 
@@ -71,16 +67,15 @@ def to_markdown(doc: fitz.Document, pages: list = None) -> str:
             fontsizes = {}
             for pno in pages:
                 page = doc[pno]
-                blocks = page.get_text("dict", flags=fitz.TEXTFLAGS_TEXT)["blocks"]
+                blocks = page.get_text("dict",
+                                       flags=fitz.TEXTFLAGS_TEXT)["blocks"]
                 for span in [  # look at all non-empty horizontal spans
-                    s
-                    for b in blocks
-                    for l in b["lines"]
-                    for s in l["spans"]
-                    if not SPACES.issuperset(s["text"])
+                        s for b in blocks for l in b["lines"]
+                        for s in l["spans"] if not SPACES.issuperset(s["text"])
                 ]:
                     fontsz = round(span["size"])
-                    count = fontsizes.get(fontsz, 0) + len(span["text"].strip())
+                    count = fontsizes.get(fontsz, 0) + \
+                        len(span["text"].strip())
                     fontsizes[fontsz] = count
 
             # maps a fontsize to a string of multiple # header tag characters
@@ -99,9 +94,8 @@ def to_markdown(doc: fitz.Document, pages: list = None) -> str:
                 else:
                     body_limit = 12
 
-            sizes = sorted(
-                [f for f in fontsizes.keys() if f > body_limit], reverse=True
-            )
+            sizes = sorted([f for f in fontsizes.keys() if f > body_limit],
+                           reverse=True)
 
             # make the header tag dictionary
             for i, size in enumerate(sizes):
@@ -180,10 +174,8 @@ def to_markdown(doc: fitz.Document, pages: list = None) -> str:
                 if all_mono:
                     # compute approx. distance from left - assuming a width
                     # of 0.5*fontsize.
-                    delta = int(
-                        (spans[0]["bbox"][0] - block["bbox"][0])
-                        / (spans[0]["size"] * 0.5)
-                    )
+                    delta = int((spans[0]["bbox"][0] - block["bbox"][0]) /
+                                (spans[0]["size"] * 0.5))
                     if not code:  # if not already in code output  mode:
                         out_string += "```"  # switch on "code" mode
                         code = True
@@ -228,14 +220,11 @@ def to_markdown(doc: fitz.Document, pages: list = None) -> str:
                             text = f"{hdr_string}{prefix}{ltext}{suffix} "
                         else:
                             text = f"{hdr_string}{prefix}{s['text'].strip()}{suffix} "
-                        text = (
-                            text.replace("<", "&lt;")
-                            .replace(">", "&gt;")
-                            .replace(chr(0xF0B7), "-")
-                            .replace(chr(0xB7), "-")
-                            .replace(chr(8226), "-")
-                            .replace(chr(9679), "-")
-                        )
+                        text = (text.replace("<", "&lt;").replace(
+                            ">", "&gt;").replace(chr(0xF0B7), "-").replace(
+                                chr(0xB7),
+                                "-").replace(chr(8226),
+                                             "-").replace(chr(9679), "-"))
                         out_string += text
                 previous_y = this_y
                 if not code:
@@ -257,10 +246,8 @@ def to_markdown(doc: fitz.Document, pages: list = None) -> str:
         # 2. make a list of table boundary boxes, sort by top-left corner.
         # Must include the header bbox, which may be external.
         tab_rects = sorted(
-            [
-                (fitz.Rect(t.bbox) | fitz.Rect(t.header.bbox), i)
-                for i, t in enumerate(tabs.tables)
-            ],
+            [(fitz.Rect(t.bbox) | fitz.Rect(t.header.bbox), i)
+             for i, t in enumerate(tabs.tables)],
             key=lambda r: (r[0].y0, r[0].x0),
         )
 
@@ -307,7 +294,8 @@ def to_markdown(doc: fitz.Document, pages: list = None) -> str:
         # we have all rectangles and can start outputting their contents
         for rtype, r, idx in text_rects:
             if rtype == "text":  # a text rectangle
-                md_string += write_text(page, r, hdr_prefix)  # write MD content
+                # write MD content
+                md_string += write_text(page, r, hdr_prefix)
                 md_string += "\n"
             else:  # a table rect
                 md_string += tabs[idx].to_markdown(clean=False)
