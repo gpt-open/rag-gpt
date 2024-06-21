@@ -13,7 +13,8 @@ def remove_empty_lines(text: str) -> str:
     return "\n".join(non_empty_lines)
 
 
-def split_text_with_regex_from_end(text: str, separator: str, keep_separator: bool) -> List[str]:
+def split_text_with_regex_from_end(text: str, separator: str,
+                                   keep_separator: bool) -> List[str]:
     # Now that we have the separator, split the text
     if separator:
         if keep_separator:
@@ -31,7 +32,8 @@ def split_text_with_regex_from_end(text: str, separator: str, keep_separator: bo
 
 
 class MarkdownTextSplitter(RecursiveCharacterTextSplitter):
-    def __init__(self,
+    def __init__(
+        self,
         separators: Optional[List[str]] = None,
         keep_separator: bool = True,
         is_separator_regex: bool = True,
@@ -41,12 +43,7 @@ class MarkdownTextSplitter(RecursiveCharacterTextSplitter):
         """Create a new TextSplitter."""
         super().__init__(keep_separator=keep_separator, **kwargs)
         self._separators = separators or [
-            "\n\n",
-            "\n",
-            "。|！|？",
-            "\.\s|\!\s|\?\s",
-            "；|;\s",
-            "，|,\s"
+            "\n\n", "\n", "。|！|？", "\.\s|\!\s|\?\s", "；|;\s", "，|,\s"
         ]
         self._is_separator_regex = is_separator_regex
         self._is_remove_empty_line = is_remove_empty_line
@@ -67,8 +64,10 @@ class MarkdownTextSplitter(RecursiveCharacterTextSplitter):
                 new_separators = separators[i + 1:]
                 break
 
-        _separator = separator if self._is_separator_regex else re.escape(separator)
-        splits = split_text_with_regex_from_end(text, _separator, self._keep_separator)
+        _separator = separator if self._is_separator_regex else re.escape(
+            separator)
+        splits = split_text_with_regex_from_end(text, _separator,
+                                                self._keep_separator)
 
         # Now go merging things, recursively splitting longer texts.
         _good_splits = []
@@ -89,7 +88,10 @@ class MarkdownTextSplitter(RecursiveCharacterTextSplitter):
         if _good_splits:
             merged_text = self._merge_splits(_good_splits, _separator)
             final_chunks.extend(merged_text)
-        chunks = [re.sub(r"\n{2,}", "\n", chunk.strip()) for chunk in final_chunks if chunk.strip()!=""]
+        chunks = [
+            re.sub(r"\n{2,}", "\n", chunk.strip()) for chunk in final_chunks
+            if chunk.strip() != ""
+        ]
         if self._is_remove_empty_line:
             chunks = [remove_empty_lines(chunk) for chunk in chunks]
         return chunks

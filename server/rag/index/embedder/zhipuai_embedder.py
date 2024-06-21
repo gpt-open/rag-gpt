@@ -18,10 +18,12 @@ class ZhipuAIEmbeddings(Embeddings):
                     model=self.model,
                     input=text,
                 )
-                embeddings.append(response.data[0].embedding if response.data else [])
+                embeddings.append(
+                    response.data[0].embedding if response.data else [])
             except Exception as e:
                 # Log the error and use an empty list as a fallback
-                logger.error(f"Error embedding document: {text} with error: {str(e)}")
+                logger.error(
+                    f"Error embedding document: {text} with error: {str(e)}")
                 embeddings.append([])
         return embeddings
 

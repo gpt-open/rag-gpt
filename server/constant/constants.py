@@ -95,21 +95,20 @@ MAX_LOCAL_FILE_BATCH_LENGTH = 10
 
 # Supported file extensions
 FILE_LOADER_EXTENSIONS = {
-".txt",
-".md",
-".pdf",
-".epub",
-".mobi",
-".html",
-".docx",
-".pptx",
-".xlsx",
-".csv",
+    ".txt",
+    ".md",
+    ".pdf",
+    ".epub",
+    ".mobi",
+    ".html",
+    ".docx",
+    ".pptx",
+    ".xlsx",
+    ".csv",
 }
 
-
 # in t_sitemap_domain_tab
-#`domain_status` meanings:
+# `domain_status` meanings:
 #  1 - 'Domain statistics gathering'
 #  2 - 'Domain statistics gathering collected'
 #  3 - 'Domain processing'
@@ -119,9 +118,8 @@ DOMAIN_STATISTICS_GATHERING_COLLECTED = 2
 DOMAIN_PROCESSING = 3
 DOMAIN_PROCESSED = 4
 
-
 # in t_sitemap_url_tab
-#`doc_status` meanings:
+# `doc_status` meanings:
 #  0 - 'Process failed'
 #  1 - 'Sitemaps web page recorded'
 #  2 - 'Sitemaps web page crawling'
@@ -135,9 +133,8 @@ SITEMAP_URL_CRAWLING_COMPLETED = 3
 SITEMAP_URL_EMBEDDED = 4
 SITEMAP_URL_EXPIRED = 5
 
-
 # in t_isolated_url_tab
-#`doc_status` meanings:
+# `doc_status` meanings:
 #  0 - 'Process failed'
 #  1 - 'Isolated web page recorded'
 #  2 - 'Isolated web page crawling'
@@ -149,9 +146,8 @@ ISOLATED_URL_CRAWLING = 2
 ISOLATED_URL_CRAWLING_COMPLETED = 3
 ISOLATED_URL_EMBEDDED = 4
 
-
 # in t_local_file_tab
-#`doc_status` meanings:
+# `doc_status` meanings:
 #  0 - 'Process failed'
 #  1 - 'Local files recorded'
 #  2 - 'Local files parsing'
@@ -163,9 +159,8 @@ LOCAL_FILE_PARSING = 2
 LOCAL_FILE_PARSING_COMPLETED = 3
 LOCAL_FILE_EMBEDDED = 4
 
-
 # in t_doc_embedding_map_tab
-#`doc_source` meanings:
+# `doc_source` meanings:
 #  1 - 'from sitemap URLs'
 #  2 - 'from isolated URLs'
 #  3 - 'from local files'

@@ -40,7 +40,11 @@ class DiskcacheClient:
         """
         self.cache.delete(key)
 
-    def append_to_list(self, key: str, value: Any, ttl: Optional[int] = None, max_length: int = 5) -> None:
+    def append_to_list(self,
+                       key: str,
+                       value: Any,
+                       ttl: Optional[int] = None,
+                       max_length: int = 5) -> None:
         """
         Append an element to a list while keeping the list length not exceeding the maximum.
 

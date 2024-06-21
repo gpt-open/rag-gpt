@@ -22,10 +22,13 @@ class TokenHelper:
         """
         payload = {
             'user_id': user_id,
-            'exp': datetime.datetime.utcnow() + TokenHelper.JWT_EXPIRATION_DELTA
+            'exp':
+            datetime.datetime.utcnow() + TokenHelper.JWT_EXPIRATION_DELTA
         }
         # jwt.encode returns a byte string, decode it to convert to a normal string
-        return jwt.encode(payload, TokenHelper.JWT_SECRET, algorithm=TokenHelper.JWT_ALGORITHM)
+        return jwt.encode(payload,
+                          TokenHelper.JWT_SECRET,
+                          algorithm=TokenHelper.JWT_ALGORITHM)
 
     @staticmethod
     def verify_token(token: str) -> Union[Dict[str, Any], str]:
@@ -39,7 +42,9 @@ class TokenHelper:
             Union[Dict[str, Any], str]: The payload as a dictionary if valid, otherwise an error message string.
         """
         try:
-            payload = jwt.decode(token, TokenHelper.JWT_SECRET, algorithms=[TokenHelper.JWT_ALGORITHM])
+            payload = jwt.decode(token,
+                                 TokenHelper.JWT_SECRET,
+                                 algorithms=[TokenHelper.JWT_ALGORITHM])
             return payload
         except ExpiredSignatureError:
             return 'Token expired'
