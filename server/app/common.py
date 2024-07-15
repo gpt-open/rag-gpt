@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import uuid
-from flask import Blueprint, Flask, request
+from flask import Blueprint, request
 from werkzeug.utils import secure_filename
 from server.constant.constants import STATIC_DIR, MEDIA_DIR
 from server.app.utils.decorators import token_required

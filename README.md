@@ -91,6 +91,7 @@ USE_RERANKING=1
 USE_DEBUG=0
 USE_LLAMA_PARSE=0
 LLAMA_CLOUD_API_KEY="xxxx"
+USE_GPT4O=0
 ```
 
 - Don't modify **`LLM_NAME`**
@@ -98,6 +99,9 @@ LLAMA_CLOUD_API_KEY="xxxx"
 - Update the **`GPT_MODEL_NAME`** setting, replacing `gpt-3.5-turbo` with `gpt-4-turbo` or `gpt-4o` if you want to use GPT-4.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
+- Set **`USE_LLAMA_PARSE`** to 1 if you want to use `LlamaParse`.
+- Modify the **`LLAMA_CLOUD_API_KEY `** with your own key. Please log in to the [LLamaCloud website](https://cloud.llamaindex.ai/api-key) to view your API Key.
+- Set **`USE_GPT4O`** to 1 if you want to use `GPT-4o` mode.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 #### Using ZhipuAI as the LLM base
@@ -130,6 +134,8 @@ LLAMA_CLOUD_API_KEY="xxxx"
 - Update the **`GLM_MODEL_NAME`** setting, the model list is `['glm-3-turbo', 'glm-4', 'glm-4-0520', 'glm-4-air', 'glm-4-airx', 'glm-4-flash']`.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
+- Set **`USE_LLAMA_PARSE`** to 1 if you want to use `LlamaParse`.
+- Modify the **`LLAMA_CLOUD_API_KEY `** with your own key. Please log in to the [LLamaCloud website](https://cloud.llamaindex.ai/api-key) to view your API Key.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 #### Using DeepSeek as the LLM base
@@ -167,6 +173,8 @@ LLAMA_CLOUD_API_KEY="xxxx"
 - Update the **`DEEPSEEK_MODEL_NAME `** setting if you want to use other models of DeepSeek.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
+- Set **`USE_LLAMA_PARSE`** to 1 if you want to use `LlamaParse`.
+- Modify the **`LLAMA_CLOUD_API_KEY `** with your own key. Please log in to the [LLamaCloud website](https://cloud.llamaindex.ai/api-key) to view your API Key.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 
@@ -205,6 +213,8 @@ LLAMA_CLOUD_API_KEY="xxxx"
 - Update the **`MOONSHOT_MODEL_NAME `** setting if you want to use other models of Moonshot.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
+- Set **`USE_LLAMA_PARSE`** to 1 if you want to use `LlamaParse`.
+- Modify the **`LLAMA_CLOUD_API_KEY `** with your own key. Please log in to the [LLamaCloud website](https://cloud.llamaindex.ai/api-key) to view your API Key.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 
@@ -242,6 +252,8 @@ LLAMA_CLOUD_API_KEY="xxxx"
 - If you have changed the default `IP:PORT` when starting `Ollama`, please update **`OLLAMA_BASE_URL`**. Please pay special attention, only enter the IP (domain) and PORT here, without appending a URI.
 - Change **`BOT_TOPIC`** to reflect your Bot's name. This is very important, as it will be used in `Prompt Construction`. Please try to use a concise and clear word, such as `OpenIM`, `LangChain`.
 - Adjust **`URL_PREFIX`** to match your website's domain. This is mainly for generating accessible URL links for uploaded local files. Such as `http://127.0.0.1:7000/web/download_dir/2024_05_20/d3a01d6a-90cd-4c2a-b926-9cda12466caf/openssl-cookbook.pdf`.
+- Set **`USE_LLAMA_PARSE`** to 1 if you want to use `LlamaParse`.
+- Modify the **`LLAMA_CLOUD_API_KEY `** with your own key. Please log in to the [LLamaCloud website](https://cloud.llamaindex.ai/api-key) to view your API Key.
 - For more information about the meanings and usages of constants, you can check under the `server/constant` directory.
 
 

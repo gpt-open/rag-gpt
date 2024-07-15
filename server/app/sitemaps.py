@@ -3,14 +3,17 @@ from functools import wraps
 import json
 from threading import Thread
 import time
-from typing import Callable, Dict, Any, List, Union, Set
+from typing import Callable, Dict, Any, List
 from urllib.parse import urlparse
-from flask import Blueprint, Flask, request
+from flask import Blueprint, request
 from server.app.utils.decorators import token_required
 from server.app.utils.sqlite_client import get_db_connection
 from server.app.utils.diskcache_lock import diskcache_lock
 from server.app.utils.url_helper import is_valid_url
-from server.constant.constants import ADD_SITEMAP_CONTENT, DELETE_SITEMAP_CONTENT, UPDATE_SITEMAP_CONTENT, DOMAIN_PROCESSING, FROM_SITEMAP_URL
+from server.constant.constants import (ADD_SITEMAP_CONTENT,
+                                       DELETE_SITEMAP_CONTENT,
+                                       UPDATE_SITEMAP_CONTENT,
+                                       DOMAIN_PROCESSING, FROM_SITEMAP_URL)
 from server.logger.logger_config import my_logger as logger
 from server.rag.index.parser.html_parser.web_link_crawler import AsyncCrawlerSiteLink
 from server.rag.index.parser.html_parser.web_content_crawler import AsyncCrawlerSiteContent

@@ -7,7 +7,11 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from server.app.utils.url_helper import is_same_domain, normalize_url
 from server.app.utils.diskcache_lock import diskcache_lock
-from server.constant.constants import SQLITE_DB_DIR, SQLITE_DB_NAME, MAX_CRAWL_PARALLEL_REQUEST, SITEMAP_URL_RECORDED, SITEMAP_URL_EXPIRED, DOMAIN_STATISTICS_GATHERING_COLLECTED
+from server.constant.constants import (SQLITE_DB_DIR, SQLITE_DB_NAME,
+                                       MAX_CRAWL_PARALLEL_REQUEST,
+                                       SITEMAP_URL_RECORDED,
+                                       SITEMAP_URL_EXPIRED,
+                                       DOMAIN_STATISTICS_GATHERING_COLLECTED)
 from server.logger.logger_config import my_logger as logger
 
 

@@ -1,5 +1,5 @@
 import time
-from flask import Blueprint, Flask, request
+from flask import Blueprint, request
 from werkzeug.security import generate_password_hash, check_password_hash
 from server.app.utils.decorators import token_required
 from server.app.utils.diskcache_lock import diskcache_lock

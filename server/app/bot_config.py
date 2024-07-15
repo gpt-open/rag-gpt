@@ -1,6 +1,6 @@
 import json
 import time
-from flask import Blueprint, Flask, request
+from flask import Blueprint, request
 from server.app.utils.decorators import token_required
 from server.app.utils.sqlite_client import get_db_connection
 from server.app.utils.diskcache_client import diskcache_client

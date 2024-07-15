@@ -6,7 +6,10 @@ from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.schema.document import Document
-from server.constant.constants import OPENAI_EMBEDDING_MODEL_NAME, ZHIPUAI_EMBEDDING_MODEL_NAME, OPENAI_EMBEDDING_MODEL_NAME, CHROMA_DB_DIR, CHROMA_COLLECTION_NAME, OLLAMA_EMBEDDING_MODEL_NAME
+from server.constant.constants import (OPENAI_EMBEDDING_MODEL_NAME,
+                                       ZHIPUAI_EMBEDDING_MODEL_NAME,
+                                       CHROMA_DB_DIR, CHROMA_COLLECTION_NAME,
+                                       OLLAMA_EMBEDDING_MODEL_NAME)
 from server.logger.logger_config import my_logger as logger
 from server.rag.index.embedder.zhipuai_embedder import ZhipuAIEmbeddings
 

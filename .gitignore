@@ -7,6 +7,11 @@ __pycache__/
 
 .DS_Store
 
+chroma_dir
+diskcache_dir
+sqlite_dir
+web/download_dir
+
 # C extensions
 *.so
 
