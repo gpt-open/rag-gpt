@@ -4,8 +4,11 @@ from threading import Thread
 import time
 from typing import Dict, Any
 from urllib.parse import urlparse
-from flask import Blueprint, Flask, request
-from server.constant.constants import MAX_ISOLATED_URL_BATCH_LENGTH, FROM_ISOLATED_URL, ADD_ISOLATED_URL_CONTENT, DELETE_ISOLATED_URL_CONTENT
+from flask import Blueprint, request
+from server.constant.constants import (MAX_ISOLATED_URL_BATCH_LENGTH,
+                                       FROM_ISOLATED_URL,
+                                       ADD_ISOLATED_URL_CONTENT,
+                                       DELETE_ISOLATED_URL_CONTENT)
 from server.app.utils.decorators import token_required
 from server.app.utils.sqlite_client import get_db_connection
 from server.app.utils.diskcache_lock import diskcache_lock

@@ -1,6 +1,6 @@
 from flask import Blueprint, request
-from server.logger.logger_config import my_logger as logger
 from server.app.utils.token_helper import TokenHelper
+from server.logger.logger_config import my_logger as logger
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/open_kf_api/auth')
 

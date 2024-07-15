@@ -6,9 +6,11 @@ from threading import Thread
 import time
 from typing import List, Dict, Any, Tuple
 from urllib.parse import urlparse
-from flask import Blueprint, Flask, request, Response
+from flask import Blueprint, request, Response
 from langchain.schema.document import Document
-from server.constant.constants import RECALL_TOP_K, RERANK_RECALL_TOP_K, MAX_QUERY_LENGTH, SESSION_EXPIRE_TIME, MAX_HISTORY_SESSION_LENGTH
+from server.constant.constants import (RECALL_TOP_K, RERANK_RECALL_TOP_K,
+                                       MAX_QUERY_LENGTH, SESSION_EXPIRE_TIME,
+                                       MAX_HISTORY_SESSION_LENGTH)
 from server.app.utils.decorators import token_required
 from server.app.utils.sqlite_client import get_db_connection
 from server.app.utils.diskcache_client import diskcache_client

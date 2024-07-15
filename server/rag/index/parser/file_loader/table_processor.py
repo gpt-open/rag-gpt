@@ -122,7 +122,6 @@ class ExcelTableProcessor:
 
     def identify_tables(self, sheet: Worksheet) -> List[str]:
         """Scan the worksheet for tables and return a list of Markdown formatted tables."""
-        sheet = self.wb.active
         max_row = sheet.max_row
         max_col = sheet.max_column
         markdown_tables = []

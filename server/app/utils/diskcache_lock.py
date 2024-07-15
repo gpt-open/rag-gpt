@@ -1,8 +1,9 @@
 from contextlib import contextmanager
-from typing import Generator, Any
+from typing import Generator
 from diskcache import Cache, Lock
 from server.app.utils.diskcache_client import diskcache_client
-from server.constant.constants import DISTRIBUTED_LOCK_ID, DISTRIBUTED_LOCK_EXPIRE_TIME
+from server.constant.constants import (DISTRIBUTED_LOCK_ID,
+                                       DISTRIBUTED_LOCK_EXPIRE_TIME)
 
 
 class DiskcacheLock:

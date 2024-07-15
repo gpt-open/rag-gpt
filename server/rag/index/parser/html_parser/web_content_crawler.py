@@ -10,7 +10,10 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 import html2text
 from server.app.utils.hash import generate_md5
-from server.constant.constants import SQLITE_DB_DIR, SQLITE_DB_NAME, MAX_CRAWL_PARALLEL_REQUEST, MAX_CHUNK_LENGTH, CHUNK_OVERLAP, FROM_SITEMAP_URL
+from server.constant.constants import (SQLITE_DB_DIR, SQLITE_DB_NAME,
+                                       MAX_CRAWL_PARALLEL_REQUEST,
+                                       MAX_CHUNK_LENGTH, CHUNK_OVERLAP,
+                                       FROM_SITEMAP_URL)
 from server.logger.logger_config import my_logger as logger
 from server.rag.index.chunk.markdown_splitter import MarkdownTextSplitter
 from server.rag.index.embedder.document_embedder import document_embedder
