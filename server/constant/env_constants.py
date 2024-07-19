@@ -21,9 +21,11 @@ def check_env_variables():
             logger.error(f"OPENAI_API_KEY: '{OPENAI_API_KEY}' is illegal!")
             sys.exit(-1)
 
-        # GPT_MODEL_NAME: Specific GPT model being used, e.g., 'gpt-3.5-turbo' or 'gpt-4-turbo', or 'gpt-4o'.
+        # GPT_MODEL_NAME: Specific GPT model being used, e.g., 'gpt-3.5-turbo' or 'gpt-4-turbo' or 'gpt-4o' or 'gpt-4o-mini'.
         GPT_MODEL_NAME = os.getenv('GPT_MODEL_NAME')
-        gpt_model_name_list = ['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o']
+        gpt_model_name_list = [
+            'gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini'
+        ]
         if GPT_MODEL_NAME not in gpt_model_name_list:
             logger.error(
                 f"GPT_MODEL_NAME: '{GPT_MODEL_NAME}' is illegal! Must be in {gpt_model_name_list}"
