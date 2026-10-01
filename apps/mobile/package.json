@@ -21,7 +21,7 @@
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-community/datetimepicker": "^9.1.0",
     "@react-native-documents/viewer": "4.0.0",
-    "@react-navigation/bottom-tabs": "^7.18.11",
+    "@react-navigation/bottom-tabs": "^7.19.2",
     "@react-navigation/native": "^7.3.11",
     "@react-navigation/stack": "^7.10.14",
     "i18next": "^23.16.8",
