@@ -1,12 +1,12 @@
 module github.com/lynavo/lynavo-drive/services/sidecar-go
 
-go 1.25.6
+go 1.26.0
 
 require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/mattn/go-sqlite3 v1.14.48
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
